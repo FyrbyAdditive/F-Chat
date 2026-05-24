@@ -447,16 +447,6 @@ private struct SamplingSection: View {
                 defaultValue: 2048
             )
 
-            Picker("Reasoning effort", selection: Binding(
-                get: { ReasoningEffortChoice(sampling.reasoningEffort) },
-                set: { sampling.reasoningEffort = $0.effort }
-            )) {
-                ForEach(ReasoningEffortChoice.allCases) { choice in
-                    Text(choice.displayName).tag(choice)
-                }
-            }
-            .pickerStyle(.menu)
-
             Stepper(value: Binding(
                 get: { sampling.maxToolIterations },
                 set: { sampling.maxToolIterations = max(1, min($0, 32)) }
@@ -474,42 +464,6 @@ private struct SamplingSection: View {
             ))
         }
     }
-}
-
-private enum ReasoningEffortChoice: Hashable, CaseIterable, Identifiable {
-    case `default`, minimal, low, medium, high
-
-    init(_ effort: ReasoningEffort?) {
-        switch effort {
-        case .none: self = .default
-        case .minimal: self = .minimal
-        case .low: self = .low
-        case .medium: self = .medium
-        case .high: self = .high
-        }
-    }
-
-    var effort: ReasoningEffort? {
-        switch self {
-        case .default: return nil
-        case .minimal: return .minimal
-        case .low: return .low
-        case .medium: return .medium
-        case .high: return .high
-        }
-    }
-
-    var displayName: String {
-        switch self {
-        case .default: return "Default"
-        case .minimal: return "Minimal"
-        case .low: return "Low"
-        case .medium: return "Medium"
-        case .high: return "High"
-        }
-    }
-
-    var id: String { displayName }
 }
 
 private struct OptionalNumericRow: View {

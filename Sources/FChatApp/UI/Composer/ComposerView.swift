@@ -1,11 +1,12 @@
 import SwiftUI
+import FChatCore
 
 struct ComposerView: View {
     @Bindable var viewModel: ChatViewModel
     @FocusState private var focused: Bool
 
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 6) {
             if let error = viewModel.lastError {
                 Label(error, systemImage: "exclamationmark.triangle.fill")
                     .font(.caption)
@@ -43,9 +44,24 @@ struct ComposerView: View {
                 .keyboardShortcut(.return, modifiers: [.command])
                 .disabled(!viewModel.isStreaming && viewModel.draftText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
+            composerToolbar
         }
         .padding(DesignTokens.panelPadding)
         .onAppear { focused = true }
+    }
+
+    @ViewBuilder
+    private var composerToolbar: some View {
+        HStack(spacing: 6) {
+            ReasoningMenu(
+                current: viewModel.conversation.reasoningEffort,
+                onSelect: { effort in
+                    viewModel.conversation.reasoningEffort = effort
+                }
+            )
+            Spacer()
+        }
+        .padding(.horizontal, 2)
     }
 
     private func submitIfReady() {
@@ -56,5 +72,55 @@ struct ComposerView: View {
         let trimmed = viewModel.draftText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         viewModel.send()
+    }
+}
+
+private struct ReasoningMenu: View {
+    let current: ReasoningEffort?
+    let onSelect: (ReasoningEffort?) -> Void
+
+    var body: some View {
+        Menu {
+            Button {
+                onSelect(nil)
+            } label: {
+                Label("Default", systemImage: current == nil ? "checkmark" : "")
+            }
+            Divider()
+            ForEach(ReasoningEffort.allCases, id: \.self) { effort in
+                Button {
+                    onSelect(effort)
+                } label: {
+                    Label(effort.rawValue.capitalized, systemImage: current == effort ? "checkmark" : "")
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "brain")
+                    .font(.system(size: 12))
+                Text(label)
+                    .font(.caption)
+            }
+            .foregroundStyle(current == nil ? .secondary : .primary)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(
+                Capsule().fill(current == nil ? Color.gray.opacity(0.08) : Color.accentColor.opacity(0.15))
+            )
+            .overlay(
+                Capsule().stroke(Color.gray.opacity(0.2), lineWidth: 0.5)
+            )
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help("Reasoning effort for this chat")
+    }
+
+    private var label: String {
+        switch current {
+        case .none: return "Reasoning"
+        case .some(let e): return "Reasoning · \(e.rawValue.capitalized)"
+        }
     }
 }

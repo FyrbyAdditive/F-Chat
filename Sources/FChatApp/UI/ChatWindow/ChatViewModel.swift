@@ -141,7 +141,7 @@ final class ChatViewModel {
             temperature: sampling.temperature,
             topP: sampling.topP,
             maxOutputTokens: sampling.maxOutputTokens,
-            reasoningEffort: sampling.reasoningEffort,
+            reasoningEffort: conversation.reasoningEffort,
             parallelToolCalls: sampling.parallelToolCalls,
             tools: [],
             toolChoice: .auto,
