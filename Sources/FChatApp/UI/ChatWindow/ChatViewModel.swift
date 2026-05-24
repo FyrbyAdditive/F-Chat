@@ -8,19 +8,91 @@ import FChatTools
 @Observable
 final class ChatViewModel {
     var conversation: Conversation {
-        didSet { environment?.update(conversation) }
+        didSet {
+            environment?.update(conversation)
+            scheduleProjectionRefresh()
+        }
     }
-    var draftText: String = ""
+    var draftText: String = "" {
+        didSet { scheduleProjectionRefresh() }
+    }
     var isStreaming: Bool = false
+    /// Per-conversation transient error attached to whichever user message
+    /// it relates to. Cleared on retry.
     var lastError: String?
+    /// MessageID of the failed user message we should offer a Retry button on.
+    var failedUserMessageID: MessageID?
+    /// Live projection of the next send. Drives the meter chip.
+    var projection: RequestPayloadBuilder.Projection?
+    /// Effective budget for the currently active provider/model. Drives
+    /// the meter's denominator.
+    var budget: ContextBudget?
+    /// True while we're running a summarize call as part of compact-then-send.
+    var isCompacting: Bool = false
+
     private weak var environment: AppEnvironment?
     private var streamTask: Task<Void, Never>?
+    private var projectionTask: Task<Void, Never>?
     private var firstDeltaAt: Date?
 
     init(conversation: Conversation, environment: AppEnvironment) {
         self.conversation = conversation
         self.environment = environment
+        // Kick the first projection so the meter has a value at view open.
+        Task { @MainActor in self.refreshProjectionNow() }
     }
+
+    // MARK: - Projection
+
+    private func scheduleProjectionRefresh() {
+        projectionTask?.cancel()
+        projectionTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(150))
+            guard !Task.isCancelled, let self else { return }
+            self.refreshProjectionNow()
+        }
+    }
+
+    func refreshProjectionNow() {
+        guard let environment, let provider = environment.currentProvider() else {
+            projection = nil
+            budget = nil
+            return
+        }
+        let modelID = provider.defaultModel ?? ""
+        let modelInfo = environment.detectedModels[provider.id]?.first(where: { $0.id == modelID })
+        let budget = ContextBudget.resolve(settings: provider.context, model: modelInfo)
+        self.budget = budget
+
+        let tokenizer = TokenizerCache.shared.get(modelID: modelID)
+        let builder = RequestPayloadBuilder(tokenizer: tokenizer)
+        let instructions = composeInstructions(language: environment.promptLanguage)
+
+        let enabledToolNames = environment.enabledTools
+        let registry = environment.toolRegistry
+        Task { @MainActor in
+            let allDefs = await registry.definitions(for: environment.promptLanguage)
+            let toolDefs = allDefs.filter { enabledToolNames.contains($0.name) }
+            self.projection = builder.project(
+                conversation: self.conversation,
+                draftUserText: self.draftText,
+                instructions: instructions,
+                toolDefinitions: toolDefs
+            )
+        }
+    }
+
+    private func composeInstructions(language: PromptLanguage) -> String {
+        let prompt = LocalizedSystemPrompt(
+            language: language,
+            includeToolGuidance: true,
+            includeRAGGuidance: !conversation.settings.attachedCollections.isEmpty
+        )
+        let temporal = TemporalContext(language: language).render()
+        return prompt.render() + "\n\n" + temporal
+    }
+
+    // MARK: - Send
 
     func send() {
         guard !draftText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
@@ -37,28 +109,40 @@ final class ChatViewModel {
 
         let userText = draftText
         draftText = ""
+        lastError = nil
+        failedUserMessageID = nil
 
         let userMessage = Message(role: .user, contentItems: [.text(userText)])
         conversation.messages.append(userMessage)
         conversation.updatedAt = .now
+        let userMessageID = userMessage.id
+
+        // Oversized-single-message check — refuse to send if the user
+        // message alone exceeds the budget. Their text stays in the
+        // composer (we already cleared draftText; restore it).
+        let modelInfo = environment.detectedModels[providerRecord.id]?.first(where: { $0.id == trimmedModel })
+        let budget = ContextBudget.resolve(settings: providerRecord.context, model: modelInfo)
+        let tokenizer = TokenizerCache.shared.get(modelID: trimmedModel)
+        let userMessageTokens = tokenizer.countTokens(in: userText)
+        if userMessageTokens > budget.effectiveWindow {
+            // Roll back the queued user message.
+            conversation.messages.removeAll { $0.id == userMessageID }
+            draftText = userText
+            lastError = "Your message is \(userMessageTokens.formatted()) tokens — larger than this provider's \(budget.effectiveWindow.formatted())-token window. Save it as a RAG document instead (coming soon)."
+            return
+        }
+
         let assistantMessage = Message(role: .assistant, contentItems: [])
         conversation.messages.append(assistantMessage)
         let assistantIndex = conversation.messages.count - 1
+        let assistantMessageID = assistantMessage.id
 
         let registry = environment.toolRegistry
         let promptLanguage = environment.promptLanguage
         let llm = environment.makeRuntimeProvider(for: providerRecord)
         let runner = ChatTurnRunner(provider: llm, registry: registry, maxIterations: providerRecord.sampling.maxToolIterations)
 
-        let initialRequest = buildRequest(
-            userText: userText,
-            language: promptLanguage,
-            providerRecord: providerRecord,
-            modelID: trimmedModel
-        )
-
         isStreaming = true
-        lastError = nil
         firstDeltaAt = nil
         let enabledTools = environment.enabledTools
         streamTask = Task { [weak self, assistantIndex] in
@@ -66,8 +150,18 @@ final class ChatViewModel {
             do {
                 let allDefinitions = await registry.definitions(for: promptLanguage)
                 let toolDefinitions = allDefinitions.filter { enabledTools.contains($0.name) }
-                var request = initialRequest
-                request.tools = toolDefinitions
+
+                let request = try await self.buildRequestWithCompactIfNeeded(
+                    providerRecord: providerRecord,
+                    modelID: trimmedModel,
+                    language: promptLanguage,
+                    toolDefinitions: toolDefinitions,
+                    llm: llm,
+                    budget: budget,
+                    userMessageTokens: userMessageTokens,
+                    userMessageID: userMessageID,
+                    assistantMessageID: assistantMessageID
+                )
                 for try await event in runner.run(initial: request) {
                     await self.apply(event: event, assistantIndex: assistantIndex)
                 }
@@ -75,67 +169,199 @@ final class ChatViewModel {
                 let rendered = ChatViewModel.describe(error: error)
                 FileHandle.standardError.write(Data("[FChat] chat turn failed: \(rendered) — raw: \(error)\n".utf8))
                 self.lastError = rendered
+                self.failedUserMessageID = userMessageID
+                // Drop the empty assistant placeholder we appended; the user
+                // shouldn't see a blank assistant card next to a failed turn.
+                self.conversation.messages.removeAll { $0.id == assistantMessageID }
             }
             self.isStreaming = false
             self.environment?.update(self.conversation)
+            self.refreshProjectionNow()
         }
     }
 
     func cancel() {
         streamTask?.cancel()
         isStreaming = false
+        isCompacting = false
     }
 
-    /// Render an `Error` in a form that's actually useful: prefers
-    /// `LocalizedError.errorDescription`, then `CustomDebugStringConvertible`,
-    /// finally the enum case name + associated values via reflection. This
-    /// replaces the unhelpful "TheModule.SomeEnum error 0" macOS produces by
-    /// default for Swift enums that don't conform to `LocalizedError`.
-    static func describe(error: Error) -> String {
-        if let localized = (error as? LocalizedError)?.errorDescription, !localized.isEmpty {
-            return localized
-        }
-        let mirror = Mirror(reflecting: error)
-        if mirror.displayStyle == .enum, let child = mirror.children.first {
-            let label = child.label ?? "\(error)"
-            let value = "\(child.value)"
-            return value.isEmpty || value == "()" ? label : "\(label): \(value)"
-        }
-        return "\(error)"
+    /// Re-send the most recent user message after a failure. Removes the
+    /// error UI immediately; if it fails again, the error returns.
+    func retryLastFailedMessage() {
+        guard let failedID = failedUserMessageID,
+              let index = conversation.messages.lastIndex(where: { $0.id == failedID }),
+              case .text(let text) = conversation.messages[index].contentItems.first
+        else { return }
+        // Remove the failed user message; send() will re-append it with the
+        // same text, this time hopefully succeeding.
+        conversation.messages.remove(at: index)
+        lastError = nil
+        failedUserMessageID = nil
+        draftText = text
+        send()
     }
 
-    private func buildRequest(
-        userText: String,
-        language: PromptLanguage,
-        providerRecord: ProviderRecord,
-        modelID: String
-    ) -> ChatRequest {
-        var historyInput: [InputItem] = []
-        let prompt = LocalizedSystemPrompt(
-            language: language,
-            includeToolGuidance: true,
-            includeRAGGuidance: !conversation.settings.attachedCollections.isEmpty
-        )
-        for message in conversation.messages.dropLast(1) {
-            let content: [InputContent] = message.contentItems.compactMap { item in
-                if case .text(let s) = item { return .inputText(s) }
-                return nil
+    /// Manual "Compact now" action — runs the same flow as auto-compact
+    /// but with the threshold check skipped.
+    func compactNow() {
+        guard let environment, let provider = environment.currentProvider() else { return }
+        let modelID = (provider.defaultModel ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !modelID.isEmpty else { return }
+        let llm = environment.makeRuntimeProvider(for: provider)
+        let language = environment.promptLanguage
+        isCompacting = true
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            defer { self.isCompacting = false }
+            do {
+                let planner = CompactionPlanner()
+                let plan = planner.plan(
+                    messageCount: self.conversation.messages.count,
+                    recentKeepCount: provider.context.recentKeepCount
+                )
+                guard plan.willCompact else { return }
+                let summarizer = ConversationSummarizer(provider: llm, modelID: modelID, language: language)
+                let slice = self.conversation.messages[plan.summarizeIndices]
+                let summary = try await summarizer.summarize(messages: slice)
+                let record = CompactionRecord(
+                    fromIndex: plan.summarizeIndices.lowerBound,
+                    toIndex: plan.summarizeIndices.upperBound,
+                    summary: summary
+                )
+                self.conversation.compactions.append(record)
+                self.refreshProjectionNow()
+            } catch {
+                self.lastError = ChatViewModel.describe(error: error)
             }
-            guard !content.isEmpty else { continue }
-            historyInput.append(.message(role: message.role, content: content))
         }
-        // Stateless mode: we always resend the full transcript and never reference
-        // `previous_response_id`. vLLM and most self-hosted OpenAI-compatible
-        // servers don't persist responses across requests, so chaining by id
-        // 404s on the second turn. Trading a slightly larger payload for
-        // portability is the right call until we add per-provider capability
-        // detection.
-        let sampling = providerRecord.sampling
-        let temporal = TemporalContext(language: language).render()
-        let instructions = prompt.render() + "\n\n" + temporal
-        return ChatRequest(
+    }
+
+    // MARK: - Build request + maybe compact
+
+    /// Builds the request payload, running compaction first if the
+    /// projection crosses the threshold.
+    private func buildRequestWithCompactIfNeeded(
+        providerRecord: ProviderRecord,
+        modelID: String,
+        language: PromptLanguage,
+        toolDefinitions: [ToolDefinition],
+        llm: any LLMProvider,
+        budget: ContextBudget,
+        userMessageTokens: Int,
+        userMessageID: MessageID,
+        assistantMessageID: MessageID
+    ) async throws -> ChatRequest {
+        let tokenizer = TokenizerCache.shared.get(modelID: modelID)
+        let builder = RequestPayloadBuilder(tokenizer: tokenizer)
+        let instructions = composeInstructions(language: language)
+
+        // Determine the active compaction state: keep range starts after the
+        // most recent compaction's upper bound, if any.
+        let firstKeepableIndex = conversation.compactions.last?.toIndex ?? 0
+        let currentMessageCount = conversation.messages.count
+
+        // Project the cost without any further compaction.
+        let projection = builder.project(
+            conversation: conversation,
+            draftUserText: "",
+            instructions: instructions,
+            toolDefinitions: toolDefinitions,
+            summary: existingSummariesConcatenated(),
+            keepRange: firstKeepableIndex..<currentMessageCount
+        )
+
+        let projectedTotal = projection.totalTokens
+        let needsCompact = projectedTotal >= budget.compactionTrigger
+
+        var summary = existingSummariesConcatenated()
+        var keepLowerBound = firstKeepableIndex
+
+        if needsCompact {
+            await MainActor.run { self.isCompacting = true }
+            defer { Task { @MainActor in self.isCompacting = false } }
+
+            let messagesAvailableToCompact = currentMessageCount - firstKeepableIndex
+            let recentKeep = providerRecord.context.recentKeepCount
+            // Keep recentKeep messages verbatim, including the new user/assistant
+            // pair we just appended (which together count as 2 messages).
+            // So we want to summarize everything from firstKeepableIndex up to
+            // currentMessageCount - recentKeep.
+            let pivotOffset = max(0, messagesAvailableToCompact - recentKeep)
+            guard pivotOffset > 0 else {
+                // Already at-or-under the keep window — nothing to do.
+                let request = makeChatRequest(
+                    modelID: modelID,
+                    sampling: providerRecord.sampling,
+                    instructions: instructions,
+                    inputs: builder.assemble(
+                        conversation: conversation,
+                        draftUserText: "",
+                        summary: summary,
+                        keepRange: firstKeepableIndex..<currentMessageCount
+                    )
+                )
+                await cacheContextSize(messageID: userMessageID, tokens: projectedTotal)
+                _ = assistantMessageID
+                return request
+            }
+
+            let summarizeFrom = firstKeepableIndex
+            let summarizeTo = firstKeepableIndex + pivotOffset
+            let summarizer = ConversationSummarizer(provider: llm, modelID: modelID, language: language)
+            let slice = conversation.messages[summarizeFrom..<summarizeTo]
+            let freshSummary = try await summarizer.summarize(messages: slice)
+
+            let record = CompactionRecord(
+                fromIndex: summarizeFrom,
+                toIndex: summarizeTo,
+                summary: freshSummary
+            )
+            await MainActor.run {
+                self.conversation.compactions.append(record)
+            }
+
+            // Now compose the combined summary (existing + fresh) and shift
+            // the keep range to after the new compaction.
+            summary = existingSummariesConcatenated(plus: freshSummary)
+            keepLowerBound = summarizeTo
+        }
+
+        let inputs = builder.assemble(
+            conversation: conversation,
+            draftUserText: "",
+            summary: summary,
+            keepRange: keepLowerBound..<currentMessageCount
+        )
+        // Re-project with the now-current shape and cache for the footer.
+        let finalProjection = builder.project(
+            conversation: conversation,
+            draftUserText: "",
+            instructions: instructions,
+            toolDefinitions: toolDefinitions,
+            summary: summary,
+            keepRange: keepLowerBound..<currentMessageCount
+        )
+        await cacheContextSize(messageID: userMessageID, tokens: finalProjection.totalTokens)
+        _ = userMessageTokens
+        _ = assistantMessageID
+        return makeChatRequest(
+            modelID: modelID,
+            sampling: providerRecord.sampling,
+            instructions: instructions,
+            inputs: inputs
+        )
+    }
+
+    private func makeChatRequest(
+        modelID: String,
+        sampling: ProviderSamplingDefaults,
+        instructions: String,
+        inputs: [InputItem]
+    ) -> ChatRequest {
+        ChatRequest(
             model: modelID,
-            input: historyInput,
+            input: inputs,
             instructions: instructions,
             previousResponseID: nil,
             temperature: sampling.temperature,
@@ -149,11 +375,37 @@ final class ChatViewModel {
         )
     }
 
+    private func existingSummariesConcatenated(plus extra: String? = nil) -> String? {
+        var parts = conversation.compactions.map { "(\($0.compactedAt.formatted(date: .omitted, time: .shortened))) \($0.summary)" }
+        if let extra { parts.append(extra) }
+        if parts.isEmpty { return nil }
+        return parts.joined(separator: "\n\n")
+    }
+
+    private func cacheContextSize(messageID: MessageID, tokens: Int) async {
+        await MainActor.run {
+            self.conversation.contextTokensByMessage[messageID] = tokens
+        }
+    }
+
+    // MARK: - Stream event handler
+
+    static func describe(error: Error) -> String {
+        if let localized = (error as? LocalizedError)?.errorDescription, !localized.isEmpty {
+            return localized
+        }
+        let mirror = Mirror(reflecting: error)
+        if mirror.displayStyle == .enum, let child = mirror.children.first {
+            let label = child.label ?? "\(error)"
+            let value = "\(child.value)"
+            return value.isEmpty || value == "()" ? label : "\(label): \(value)"
+        }
+        return "\(error)"
+    }
+
     private func apply(event: ChatTurnEvent, assistantIndex: Int) async {
         guard conversation.messages.indices.contains(assistantIndex) else { return }
         var message = conversation.messages[assistantIndex]
-        // Start the generation clock the first time any content arrives so
-        // tokens/sec excludes server queueing + first-token latency.
         switch event {
         case .textDelta, .textCompleted, .reasoningSummaryDelta, .toolCallStarted, .toolCallReady:
             if firstDeltaAt == nil { firstDeltaAt = .now }
@@ -165,29 +417,16 @@ final class ChatViewModel {
             conversation.previousResponseID = id
             message.responseID = id
         case .textDelta(_, let delta):
-            // Coalesce streaming deltas into the trailing text item rather than
-            // appending one new .text per token. With many deltas the
-            // VStack(spacing: 8) in MessageView would otherwise produce visible
-            // vertical gaps between every token.
             if case .text(let existing) = message.contentItems.last {
                 message.contentItems[message.contentItems.count - 1] = .text(existing + delta)
             } else {
-                // Drop leading whitespace some models emit before the first
-                // visible character (e.g. MiniMax-M2.7 starts replies with "\n\n").
-                let trimmedDelta = delta.replacingOccurrences(
-                    of: "^[\\s]+", with: "", options: .regularExpression
-                )
+                let trimmedDelta = delta.replacingOccurrences(of: "^[\\s]+", with: "", options: .regularExpression)
                 if !trimmedDelta.isEmpty {
                     message.contentItems.append(.text(trimmedDelta))
                 }
             }
         case .textCompleted(_, let full):
-            // Replace trailing streamed text with the canonical assembled text
-            // and trim leading whitespace some models emit (e.g. MiniMax-M2.7
-            // on vLLM tends to lead with "\n\n").
-            let trimmed = full.replacingOccurrences(
-                of: "^[\\s]+", with: "", options: .regularExpression
-            )
+            let trimmed = full.replacingOccurrences(of: "^[\\s]+", with: "", options: .regularExpression)
             if case .text = message.contentItems.last {
                 message.contentItems[message.contentItems.count - 1] = .text(trimmed)
             } else {
@@ -212,8 +451,6 @@ final class ChatViewModel {
                 }
             }
         case .toolCallReady(let callID, let name, let arguments):
-            // Arguments fully arrived but the tool itself hasn't run yet —
-            // keep the spinner going (.running) until .toolResult lands.
             if let i = message.contentItems.lastIndex(where: { item in
                 if case .toolCall(let rec) = item { return rec.id == callID }
                 return false
@@ -241,13 +478,41 @@ final class ChatViewModel {
                 message.generationDuration = Date.now.timeIntervalSince(start)
             }
         case .completed, .maxIterationsReached:
-            // Some servers omit `usage` from the SSE stream; still finalise
-            // the clock so the UI stops the "streaming" treatment cleanly.
             if message.generationDuration == nil, let start = firstDeltaAt {
                 message.generationDuration = Date.now.timeIntervalSince(start)
             }
         }
         conversation.messages[assistantIndex] = message
         conversation.updatedAt = .now
+    }
+}
+
+/// Main-actor-bound tokenizer cache. Filled asynchronously via `warm(_:)`;
+/// `get(modelID:)` returns the cached tokenizer or a `HeuristicTokenizer`
+/// fallback. Callers that want accurate counts kick off a warm at startup.
+@MainActor
+final class TokenizerCache {
+    static let shared = TokenizerCache()
+    private var cache: [String: any Tokenizer] = [:]
+    private var inFlight: Set<String> = []
+
+    /// Synchronous lookup. Returns the cached tokenizer if loaded, or a
+    /// heuristic estimator otherwise (and kicks off a background load so
+    /// next time we have the real one).
+    func get(modelID: String) -> any Tokenizer {
+        if let cached = cache[modelID] { return cached }
+        warm(modelID: modelID)
+        return HeuristicTokenizer()
+    }
+
+    /// Async load + cache. Safe to call repeatedly for the same id.
+    func warm(modelID: String) {
+        guard cache[modelID] == nil, !inFlight.contains(modelID) else { return }
+        inFlight.insert(modelID)
+        Task { @MainActor in
+            let tokenizer = await TokenizerRegistry.shared.tokenizer(for: modelID)
+            self.cache[modelID] = tokenizer
+            self.inFlight.remove(modelID)
+        }
     }
 }

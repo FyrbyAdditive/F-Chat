@@ -20,7 +20,12 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "FChatCore"
+            name: "FChatCore",
+            resources: [
+                .copy("Tokenization/Resources/cl100k_base.tiktoken"),
+                .copy("Tokenization/Resources/o200k_base.tiktoken"),
+                .copy("Tokenization/Resources/minimax-m2.7.json"),
+            ]
         ),
         .target(
             name: "FChatProviders",

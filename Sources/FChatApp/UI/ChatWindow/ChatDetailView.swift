@@ -11,8 +11,13 @@ struct ChatDetailView: View {
         Group {
             if let viewModel {
                 VStack(spacing: 0) {
-                    TranscriptView(messages: viewModel.conversation.messages)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    TranscriptView(
+                        conversation: viewModel.conversation,
+                        failureForMessageID: viewModel.failedUserMessageID,
+                        failureMessage: viewModel.lastError,
+                        onRetry: { viewModel.retryLastFailedMessage() }
+                    )
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                     Divider()
                     ComposerView(viewModel: viewModel)
                 }

@@ -7,13 +7,28 @@ struct ComposerView: View {
 
     var body: some View {
         VStack(spacing: 6) {
-            if let error = viewModel.lastError {
+            if let error = viewModel.lastError, viewModel.failedUserMessageID == nil {
+                // Composer-level errors are reserved for things that aren't
+                // attached to a specific message — like "no provider
+                // configured" or oversized-input rejection. Per-message
+                // failures (network, summarizer) attach to the failed
+                // user message and show a Retry button there instead.
                 Label(error, systemImage: "exclamationmark.triangle.fill")
                     .font(.caption)
                     .foregroundStyle(.red)
                     .padding(8)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(DesignTokens.errorFill, in: RoundedRectangle(cornerRadius: 8))
+            }
+            if viewModel.isCompacting {
+                HStack(spacing: 6) {
+                    ProgressView().controlSize(.small)
+                    Text("Compacting context…")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                }
+                .padding(.horizontal, 4)
             }
             HStack(alignment: .bottom, spacing: 8) {
                 // TextField(axis: .vertical) starts at one line and grows up
@@ -58,6 +73,12 @@ struct ComposerView: View {
                 onSelect: { effort in
                     viewModel.conversation.reasoningEffort = effort
                 }
+            )
+            TokenMeter(
+                projection: viewModel.projection,
+                budget: viewModel.budget,
+                isCompacting: viewModel.isCompacting,
+                onCompactNow: { viewModel.compactNow() }
             )
             Spacer()
         }

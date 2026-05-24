@@ -3,6 +3,9 @@ import FChatCore
 
 struct MessageView: View {
     let message: Message
+    var contextTokens: Int? = nil
+    var failureError: String? = nil
+    var onRetry: (() -> Void)? = nil
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -12,7 +15,10 @@ struct MessageView: View {
                 ForEach(Array(message.contentItems.enumerated()), id: \.offset) { _, item in
                     contentView(for: item)
                 }
-                if message.usage != nil || message.generationDuration != nil {
+                if let failureError, let onRetry {
+                    FailureRetryBanner(message: failureError, onRetry: onRetry)
+                }
+                if !metricsLine.isEmpty {
                     Text(metricsLine)
                         .font(.caption2)
                         .foregroundStyle(.secondary)
@@ -41,7 +47,18 @@ struct MessageView: View {
                 parts.append(String(format: format, tps))
             }
         }
+        if let ctx = contextTokens, ctx > 0 {
+            parts.append("context \(formatTokens(ctx))")
+        }
         return parts.joined(separator: " · ")
+    }
+
+    private func formatTokens(_ count: Int) -> String {
+        if count >= 1000 {
+            let v = Double(count) / 1000
+            return v >= 100 ? "\(Int(v))k" : String(format: "%.1fk", v)
+        }
+        return "\(count)"
     }
 
     private var roleBadge: some View {
@@ -189,5 +206,29 @@ struct ToolResultBlock: View {
             return result.outputJSON
         }
         return str
+    }
+}
+
+struct FailureRetryBanner: View {
+    let message: String
+    let onRetry: () -> Void
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(.red)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(message)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
+            Spacer()
+            Button("Retry", action: onRetry)
+                .controlSize(.small)
+                .buttonStyle(.bordered)
+                .tint(.red)
+        }
+        .padding(8)
+        .background(DesignTokens.errorFill, in: RoundedRectangle(cornerRadius: 8))
     }
 }

@@ -201,6 +201,22 @@ private struct ProviderCard: View {
                         record = updated
                     }
                 ))
+
+                Divider().padding(.vertical, 4)
+
+                ContextSection(
+                    context: Binding(
+                        get: { record.context },
+                        set: {
+                            var updated = record
+                            updated.context = $0
+                            record = updated
+                        }
+                    ),
+                    serverMax: environment.detectedModels[record.id]?
+                        .first(where: { $0.id == record.defaultModel })?
+                        .contextWindow
+                )
             }
             .padding(.vertical, 6)
         }
@@ -462,6 +478,92 @@ private struct SamplingSection: View {
                 get: { sampling.parallelToolCalls },
                 set: { sampling.parallelToolCalls = $0 }
             ))
+        }
+    }
+}
+
+private struct ContextSection: View {
+    @Binding var context: ProviderContextSettings
+    let serverMax: Int?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Context window")
+                .font(.callout.bold())
+            Text("Controls auto-compaction. Older messages are summarized away when the projected request crosses the threshold.")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+
+            HStack {
+                Text("Hard cap (tokens)")
+                    .frame(width: 160, alignment: .trailing)
+                    .foregroundStyle(.secondary)
+                    .font(.callout)
+                Spacer()
+                Toggle("", isOn: Binding(
+                    get: { context.hardCap != nil },
+                    set: { enabled in
+                        if enabled {
+                            context.hardCap = context.hardCap ?? serverMax ?? 32_000
+                        } else {
+                            context.hardCap = nil
+                        }
+                    }
+                ))
+                .toggleStyle(.switch)
+                .controlSize(.mini)
+                .labelsHidden()
+            }
+            if let _ = context.hardCap {
+                HStack {
+                    TextField("budget", value: Binding(
+                        get: { context.hardCap ?? 0 },
+                        set: { context.hardCap = max(512, $0) }
+                    ), format: .number)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(maxWidth: 140)
+                    if let serverMax {
+                        Text("server max: \(serverMax.formatted())")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                }
+            } else if let serverMax {
+                Text("Using server max: \(serverMax.formatted()) tokens.")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            } else {
+                Text("Server max unknown — defaults to a safe 8,192 until you Test connection.")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+
+            HStack {
+                Text("Auto-compact at")
+                    .frame(width: 160, alignment: .trailing)
+                    .foregroundStyle(.secondary)
+                    .font(.callout)
+                Slider(value: Binding(
+                    get: { context.compactThreshold },
+                    set: { context.compactThreshold = max(0.5, min(0.95, $0)) }
+                ), in: 0.5...0.95, step: 0.05)
+                Text("\(Int(context.compactThreshold * 100))%")
+                    .font(.callout.monospaced())
+                    .frame(minWidth: 50, alignment: .trailing)
+                    .foregroundStyle(.secondary)
+            }
+
+            Stepper(value: Binding(
+                get: { context.recentKeepCount },
+                set: { context.recentKeepCount = max(2, min(64, $0)) }
+            ), in: 2...64) {
+                HStack {
+                    Text("Keep recent messages verbatim")
+                    Spacer()
+                    Text("\(context.recentKeepCount)").foregroundStyle(.secondary)
+                }
+            }
         }
     }
 }

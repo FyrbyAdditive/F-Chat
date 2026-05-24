@@ -11,6 +11,8 @@ public struct ProviderRecord: Identifiable, Sendable, Hashable, Codable {
     /// provider. Optional so older state files (without this field) load
     /// cleanly; resolved to `.init()` at runtime when absent.
     public var sampling: ProviderSamplingDefaults
+    /// Context-budget knobs for auto-compaction. Same back-compat story.
+    public var context: ProviderContextSettings
 
     public init(
         id: ProviderID,
@@ -19,7 +21,8 @@ public struct ProviderRecord: Identifiable, Sendable, Hashable, Codable {
         defaultModel: String? = nil,
         capability: ProviderCapability = .init(),
         modelOverrides: [ModelOverride] = [],
-        sampling: ProviderSamplingDefaults = .init()
+        sampling: ProviderSamplingDefaults = .init(),
+        context: ProviderContextSettings = .init()
     ) {
         self.id = id
         self.displayName = displayName
@@ -28,11 +31,12 @@ public struct ProviderRecord: Identifiable, Sendable, Hashable, Codable {
         self.capability = capability
         self.modelOverrides = modelOverrides
         self.sampling = sampling
+        self.context = context
     }
 
-    // Custom Decodable to tolerate missing `sampling` on old state files.
+    // Custom Decodable to tolerate missing optional fields on old state files.
     private enum CodingKeys: String, CodingKey {
-        case id, displayName, baseURL, defaultModel, capability, modelOverrides, sampling
+        case id, displayName, baseURL, defaultModel, capability, modelOverrides, sampling, context
     }
 
     public init(from decoder: Decoder) throws {
@@ -44,6 +48,28 @@ public struct ProviderRecord: Identifiable, Sendable, Hashable, Codable {
         self.capability = try c.decodeIfPresent(ProviderCapability.self, forKey: .capability) ?? .init()
         self.modelOverrides = try c.decodeIfPresent([ModelOverride].self, forKey: .modelOverrides) ?? []
         self.sampling = try c.decodeIfPresent(ProviderSamplingDefaults.self, forKey: .sampling) ?? .init()
+        self.context = try c.decodeIfPresent(ProviderContextSettings.self, forKey: .context) ?? .init()
+    }
+}
+
+/// Auto-compaction knobs per provider.
+///
+/// `hardCap`, when nil, means "use the model's `max_model_len` reported by
+/// the server, or fall back to a safe default if missing".
+public struct ProviderContextSettings: Sendable, Hashable, Codable {
+    /// User-supplied ceiling. nil → use the server's model-reported value.
+    public var hardCap: Int?
+    /// Fraction of the effective budget at which auto-compaction kicks in.
+    /// 0.8 by default; range checked to [0.5, 0.95].
+    public var compactThreshold: Double
+    /// How many of the most recent messages we keep verbatim when compacting.
+    /// The rest get summarized into a single synthetic system message.
+    public var recentKeepCount: Int
+
+    public init(hardCap: Int? = nil, compactThreshold: Double = 0.8, recentKeepCount: Int = 6) {
+        self.hardCap = hardCap
+        self.compactThreshold = max(0.5, min(0.95, compactThreshold))
+        self.recentKeepCount = max(2, min(64, recentKeepCount))
     }
 }
 

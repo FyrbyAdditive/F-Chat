@@ -13,6 +13,13 @@ public struct Conversation: Identifiable, Sendable, Hashable, Codable {
     /// quick replies and deeper reasoning on a per-turn / per-chat basis.
     /// `nil` means "use server default".
     public var reasoningEffort: ReasoningEffort?
+    /// Records of past compactions for the transcript UI. Each entry
+    /// stores the index range of messages that were summarized away in
+    /// the sent payload (the messages stay in `messages` for the UI).
+    public var compactions: [CompactionRecord]
+    /// Cached "context size at the moment we sent this message". Drives
+    /// the per-message context footer. Keyed by message id.
+    public var contextTokensByMessage: [MessageID: Int]
 
     public init(
         id: ConversationID = .init(),
@@ -22,7 +29,9 @@ public struct Conversation: Identifiable, Sendable, Hashable, Codable {
         settings: ChatSettings,
         messages: [Message] = [],
         previousResponseID: String? = nil,
-        reasoningEffort: ReasoningEffort? = nil
+        reasoningEffort: ReasoningEffort? = nil,
+        compactions: [CompactionRecord] = [],
+        contextTokensByMessage: [MessageID: Int] = [:]
     ) {
         self.id = id
         self.title = title
@@ -32,12 +41,15 @@ public struct Conversation: Identifiable, Sendable, Hashable, Codable {
         self.messages = messages
         self.previousResponseID = previousResponseID
         self.reasoningEffort = reasoningEffort
+        self.compactions = compactions
+        self.contextTokensByMessage = contextTokensByMessage
     }
 
-    // Custom Decodable so older state.json files without `reasoningEffort`
-    // load cleanly (missing optional decodes to nil).
+    // Custom Decodable so older state.json files without newer fields
+    // load cleanly (missing optionals / arrays / dicts decode to defaults).
     private enum CodingKeys: String, CodingKey {
-        case id, title, createdAt, updatedAt, settings, messages, previousResponseID, reasoningEffort
+        case id, title, createdAt, updatedAt, settings, messages
+        case previousResponseID, reasoningEffort, compactions, contextTokensByMessage
     }
 
     public init(from decoder: Decoder) throws {
@@ -50,7 +62,33 @@ public struct Conversation: Identifiable, Sendable, Hashable, Codable {
         self.messages = try c.decode([Message].self, forKey: .messages)
         self.previousResponseID = try c.decodeIfPresent(String.self, forKey: .previousResponseID)
         self.reasoningEffort = try c.decodeIfPresent(ReasoningEffort.self, forKey: .reasoningEffort)
+        self.compactions = try c.decodeIfPresent([CompactionRecord].self, forKey: .compactions) ?? []
+        self.contextTokensByMessage = try c.decodeIfPresent([MessageID: Int].self, forKey: .contextTokensByMessage) ?? [:]
     }
+}
+
+/// A single past compaction. The message indices reference into
+/// `Conversation.messages` at the time the compaction ran. They stay valid
+/// as long as we only ever append new messages to a conversation, which is
+/// the case today.
+public struct CompactionRecord: Sendable, Hashable, Codable, Identifiable {
+    public var id: UUID
+    /// Inclusive lower bound, exclusive upper bound: messages[from..<to] were
+    /// summarized away in the sent payload.
+    public var fromIndex: Int
+    public var toIndex: Int
+    public var summary: String
+    public var compactedAt: Date
+
+    public init(id: UUID = UUID(), fromIndex: Int, toIndex: Int, summary: String, compactedAt: Date = .now) {
+        self.id = id
+        self.fromIndex = fromIndex
+        self.toIndex = toIndex
+        self.summary = summary
+        self.compactedAt = compactedAt
+    }
+
+    public var messageCount: Int { max(0, toIndex - fromIndex) }
 }
 
 public struct Message: Identifiable, Sendable, Hashable, Codable {

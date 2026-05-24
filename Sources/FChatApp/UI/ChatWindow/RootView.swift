@@ -25,6 +25,13 @@ struct RootView: View {
                 environment.newConversation(title: "New chat")
             }
             await environment.registerBuiltInTools()
+            // Warm the tokenizer cache for any model the user has configured
+            // so the meter starts with accurate counts.
+            for provider in environment.providerRecords {
+                if let model = provider.defaultModel {
+                    TokenizerCache.shared.warm(modelID: model)
+                }
+            }
         }
     }
 }
