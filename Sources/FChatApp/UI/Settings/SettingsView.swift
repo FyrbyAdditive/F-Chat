@@ -8,7 +8,7 @@ struct SettingsView: View {
         TabView {
             ProvidersTab(environment: environment)
                 .tabItem { Label("Providers", systemImage: "antenna.radiowaves.left.and.right") }
-            ToolsTab()
+            ToolsTab(environment: environment)
                 .tabItem { Label("Tools", systemImage: "wrench.and.screwdriver") }
             MCPTab()
                 .tabItem { Label("MCP", systemImage: "network") }
@@ -329,15 +329,62 @@ private struct AddProviderSheet: View {
 }
 
 private struct ToolsTab: View {
+    @Bindable var environment: AppEnvironment
+
     var body: some View {
         Form {
-            Section("Built-in tools") {
-                Text("Web search uses DuckDuckGo with no API key.")
-                Text("Web fetch uses WKWebView + Mozilla Readability for clean extraction.")
-                Text("RAG search queries your local collections.")
+            Section {
+                ToolToggleRow(
+                    environment: environment,
+                    name: "web_search",
+                    title: "Web search",
+                    description: "Search the public web via DuckDuckGo. No API key required."
+                )
+                ToolToggleRow(
+                    environment: environment,
+                    name: "web_fetch",
+                    title: "Web fetch",
+                    description: "Fetch a URL and extract main readable text using WKWebView + Mozilla Readability."
+                )
+                ToolToggleRow(
+                    environment: environment,
+                    name: "rag_search",
+                    title: "RAG search",
+                    description: "Query your local document collections."
+                )
+            } header: {
+                Text("Built-in tools")
+            } footer: {
+                Text("Disabled tools are not advertised to the model and cannot be invoked.")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
+    }
+}
+
+private struct ToolToggleRow: View {
+    @Bindable var environment: AppEnvironment
+    let name: String
+    let title: String
+    let description: String
+
+    var body: some View {
+        Toggle(isOn: Binding(
+            get: { environment.enabledTools.contains(name) },
+            set: { isOn in
+                if isOn { environment.enabledTools.insert(name) }
+                else { environment.enabledTools.remove(name) }
+            }
+        )) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                Text(description)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+        }
     }
 }
 

@@ -31,13 +31,19 @@ final class AppEnvironment {
     var promptLanguage: PromptLanguage {
         didSet { scheduleSave() }
     }
-    /// Global active provider. New conversations adopt this provider + its
-    /// `defaultModel`. Existing chats keep whatever they were created with;
-    /// the Inspector still has per-chat provider/model overrides.
+    /// Global active provider. All chats use this provider; switching it
+    /// reroutes every chat to the new provider on the next send.
     var activeProviderID: ProviderID? {
         didSet { scheduleSave() }
     }
+    /// Built-in tool names enabled globally. Disabled tools are filtered out
+    /// of the `tools` array sent to the LLM at request time.
+    var enabledTools: Set<String> {
+        didSet { scheduleSave() }
+    }
     var sidebarSelection: SidebarSelection?
+
+    static let defaultEnabledTools: Set<String> = ["web_search", "web_fetch", "rag_search"]
 
     /// Cached `/models` results per provider, keyed by ProviderID.
     var detectedModels: [ProviderID: [ModelInfo]] = [:]
@@ -60,12 +66,14 @@ final class AppEnvironment {
             self.selectedConversationID = snapshot.selectedConversationID
             self.promptLanguage = snapshot.promptLanguage
             self.activeProviderID = snapshot.activeProviderID
+            self.enabledTools = snapshot.enabledTools ?? AppEnvironment.defaultEnabledTools
         } else {
             self.providerRecords = AppEnvironment.defaultProviders()
             self.conversations = []
             self.selectedConversationID = nil
             self.promptLanguage = PromptLanguage.resolve()
             self.activeProviderID = nil
+            self.enabledTools = AppEnvironment.defaultEnabledTools
         }
         // Resolve the active provider id if it's stale (deleted) or missing.
         if let active = self.activeProviderID, !self.providerRecords.contains(where: { $0.id == active }) {
@@ -99,7 +107,8 @@ final class AppEnvironment {
             conversations: conversations,
             selectedConversationID: selectedConversationID,
             promptLanguage: promptLanguage,
-            activeProviderID: activeProviderID
+            activeProviderID: activeProviderID,
+            enabledTools: enabledTools
         )
         do {
             try stateStore.save(snapshot)

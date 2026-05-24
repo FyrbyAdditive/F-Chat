@@ -60,10 +60,12 @@ final class ChatViewModel {
         isStreaming = true
         lastError = nil
         firstDeltaAt = nil
+        let enabledTools = environment.enabledTools
         streamTask = Task { [weak self, assistantIndex] in
             guard let self else { return }
             do {
-                let toolDefinitions = await registry.definitions(for: promptLanguage)
+                let allDefinitions = await registry.definitions(for: promptLanguage)
+                let toolDefinitions = allDefinitions.filter { enabledTools.contains($0.name) }
                 var request = initialRequest
                 request.tools = toolDefinitions
                 for try await event in runner.run(initial: request) {

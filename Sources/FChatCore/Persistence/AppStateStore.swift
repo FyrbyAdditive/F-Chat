@@ -51,14 +51,19 @@ public struct PersistedAppState: Codable, Sendable {
     /// Global active provider for new chats. Optional so older state files
     /// load cleanly; resolved to `providers.first?.id` at runtime when nil.
     public var activeProviderID: ProviderID?
+    /// Tool names the user has enabled globally. Optional/missing on older
+    /// state files; treated as "all built-ins enabled" when absent so the
+    /// behaviour matches what existing chats have been getting.
+    public var enabledTools: Set<String>?
 
     public init(
-        version: Int = 2,
+        version: Int = 3,
         providers: [ProviderRecord],
         conversations: [Conversation],
         selectedConversationID: ConversationID?,
         promptLanguage: PromptLanguage,
-        activeProviderID: ProviderID? = nil
+        activeProviderID: ProviderID? = nil,
+        enabledTools: Set<String>? = nil
     ) {
         self.version = version
         self.providers = providers
@@ -66,5 +71,6 @@ public struct PersistedAppState: Codable, Sendable {
         self.selectedConversationID = selectedConversationID
         self.promptLanguage = promptLanguage
         self.activeProviderID = activeProviderID
+        self.enabledTools = enabledTools
     }
 }

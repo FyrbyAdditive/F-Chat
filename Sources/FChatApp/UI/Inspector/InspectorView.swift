@@ -7,6 +7,27 @@ struct InspectorView: View {
 
     var body: some View {
         Form {
+            Section("Conversation") {
+                LabeledContent("Title") {
+                    Text(viewModel.conversation.title)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.trailing)
+                }
+                LabeledContent("Created") {
+                    Text(viewModel.conversation.createdAt, format: .dateTime)
+                        .foregroundStyle(.secondary)
+                }
+                LabeledContent("Updated") {
+                    Text(viewModel.conversation.updatedAt, format: .dateTime)
+                        .foregroundStyle(.secondary)
+                }
+                LabeledContent("Messages") {
+                    Text("\(viewModel.conversation.messages.count)")
+                        .foregroundStyle(.secondary)
+                }
+            }
+
             Section("Active provider") {
                 if let record = environment.currentProvider() {
                     LabeledContent("Provider") {
@@ -15,8 +36,7 @@ struct InspectorView: View {
                     LabeledContent("Model") {
                         Text(record.defaultModel ?? "—").foregroundStyle(.secondary)
                     }
-                    samplingSummary(for: record)
-                    Text("Configure provider, model, and sampling in Settings → Providers.")
+                    Text("Configure model and sampling in Settings → Providers.")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 } else {
@@ -25,43 +45,7 @@ struct InspectorView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-
-            Section("Conversation") {
-                LabeledContent("Created") {
-                    Text(viewModel.conversation.createdAt, format: .dateTime)
-                        .foregroundStyle(.secondary)
-                }
-                LabeledContent("Messages") {
-                    Text("\(viewModel.conversation.messages.count)")
-                        .foregroundStyle(.secondary)
-                }
-            }
         }
         .formStyle(.grouped)
-    }
-
-    @ViewBuilder
-    private func samplingSummary(for record: ProviderRecord) -> some View {
-        let s = record.sampling
-        LabeledContent("Temperature") {
-            Text(s.temperature.map { String(format: "%.2f", $0) } ?? "default")
-                .foregroundStyle(.secondary)
-        }
-        LabeledContent("top_p") {
-            Text(s.topP.map { String(format: "%.2f", $0) } ?? "default")
-                .foregroundStyle(.secondary)
-        }
-        LabeledContent("Max output tokens") {
-            Text(s.maxOutputTokens.map(String.init) ?? "default")
-                .foregroundStyle(.secondary)
-        }
-        LabeledContent("Reasoning") {
-            Text(s.reasoningEffort?.rawValue.capitalized ?? "default")
-                .foregroundStyle(.secondary)
-        }
-        LabeledContent("Max tool iterations") {
-            Text("\(s.maxToolIterations)")
-                .foregroundStyle(.secondary)
-        }
     }
 }
