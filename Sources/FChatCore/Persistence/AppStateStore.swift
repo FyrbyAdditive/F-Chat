@@ -48,18 +48,23 @@ public struct PersistedAppState: Codable, Sendable {
     public var conversations: [Conversation]
     public var selectedConversationID: ConversationID?
     public var promptLanguage: PromptLanguage
+    /// Global active provider for new chats. Optional so older state files
+    /// load cleanly; resolved to `providers.first?.id` at runtime when nil.
+    public var activeProviderID: ProviderID?
 
     public init(
-        version: Int = 1,
+        version: Int = 2,
         providers: [ProviderRecord],
         conversations: [Conversation],
         selectedConversationID: ConversationID?,
-        promptLanguage: PromptLanguage
+        promptLanguage: PromptLanguage,
+        activeProviderID: ProviderID? = nil
     ) {
         self.version = version
         self.providers = providers
         self.conversations = conversations
         self.selectedConversationID = selectedConversationID
         self.promptLanguage = promptLanguage
+        self.activeProviderID = activeProviderID
     }
 }

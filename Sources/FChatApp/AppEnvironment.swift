@@ -31,6 +31,12 @@ final class AppEnvironment {
     var promptLanguage: PromptLanguage {
         didSet { scheduleSave() }
     }
+    /// Global active provider. New conversations adopt this provider + its
+    /// `defaultModel`. Existing chats keep whatever they were created with;
+    /// the Inspector still has per-chat provider/model overrides.
+    var activeProviderID: ProviderID? {
+        didSet { scheduleSave() }
+    }
     var sidebarSelection: SidebarSelection?
 
     /// Cached `/models` results per provider, keyed by ProviderID.
@@ -53,11 +59,20 @@ final class AppEnvironment {
             self.conversations = snapshot.conversations
             self.selectedConversationID = snapshot.selectedConversationID
             self.promptLanguage = snapshot.promptLanguage
+            self.activeProviderID = snapshot.activeProviderID
         } else {
             self.providerRecords = AppEnvironment.defaultProviders()
             self.conversations = []
             self.selectedConversationID = nil
             self.promptLanguage = PromptLanguage.resolve()
+            self.activeProviderID = nil
+        }
+        // Resolve the active provider id if it's stale (deleted) or missing.
+        if let active = self.activeProviderID, !self.providerRecords.contains(where: { $0.id == active }) {
+            self.activeProviderID = self.providerRecords.first?.id
+        }
+        if self.activeProviderID == nil {
+            self.activeProviderID = self.providerRecords.first?.id
         }
         if let id = self.selectedConversationID, self.conversations.contains(where: { $0.id == id }) {
             self.sidebarSelection = .conversation(id)
@@ -83,7 +98,8 @@ final class AppEnvironment {
             providers: providerRecords,
             conversations: conversations,
             selectedConversationID: selectedConversationID,
-            promptLanguage: promptLanguage
+            promptLanguage: promptLanguage,
+            activeProviderID: activeProviderID
         )
         do {
             try stateStore.save(snapshot)
@@ -92,8 +108,11 @@ final class AppEnvironment {
         }
     }
 
+    /// The provider new conversations should be created with. Falls back to
+    /// the first configured provider when no global active id is set.
     func currentProvider() -> ProviderRecord? {
-        providerRecords.first
+        if let id = activeProviderID, let record = provider(id) { return record }
+        return providerRecords.first
     }
 
     func provider(_ id: ProviderID) -> ProviderRecord? {
@@ -148,6 +167,10 @@ final class AppEnvironment {
         let id = ProviderID(rawValue: slug(from: displayName.isEmpty ? baseURL.host ?? "provider" : displayName))
         let record = ProviderRecord(id: id, displayName: displayName.isEmpty ? id.rawValue : displayName, baseURL: baseURL)
         providerRecords.append(record)
+        // If this is the first provider, make it the active default.
+        if activeProviderID == nil {
+            activeProviderID = id
+        }
         return record
     }
 
@@ -155,6 +178,10 @@ final class AppEnvironment {
         providerRecords.removeAll { $0.id == id }
         detectedModels[id] = nil
         providerStatus[id] = nil
+        // If we just removed the active provider, fall back to whatever's left.
+        if activeProviderID == id {
+            activeProviderID = providerRecords.first?.id
+        }
     }
 
     func registerBuiltInTools() async {

@@ -28,6 +28,10 @@ private struct ProvidersTab: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            activeProviderHeader
+                .padding(.horizontal)
+                .padding(.top)
+            Divider().padding(.top, 12)
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     ForEach($environment.providerRecords) { $record in
@@ -49,6 +53,33 @@ private struct ProvidersTab: View {
         }
         .sheet(isPresented: $showAddSheet) {
             AddProviderSheet(environment: environment, isPresented: $showAddSheet)
+        }
+    }
+
+    @ViewBuilder
+    private var activeProviderHeader: some View {
+        HStack(alignment: .firstTextBaseline) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Active provider")
+                    .font(.callout.bold())
+                Text("New chats use this provider and its default model. Each chat keeps its own setting; per-chat overrides live in the Inspector.")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer()
+            Picker("", selection: Binding(
+                get: { environment.activeProviderID ?? environment.providerRecords.first?.id ?? ProviderID(rawValue: "") },
+                set: { newID in environment.activeProviderID = newID }
+            )) {
+                ForEach(environment.providerRecords) { record in
+                    Text(record.displayName).tag(record.id)
+                }
+            }
+            .labelsHidden()
+            .pickerStyle(.menu)
+            .frame(maxWidth: 240)
+            .disabled(environment.providerRecords.isEmpty)
         }
     }
 }
