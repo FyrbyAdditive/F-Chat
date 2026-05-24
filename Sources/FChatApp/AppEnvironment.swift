@@ -207,6 +207,27 @@ final class AppEnvironment {
         }
     }
 
+    func deleteConversation(_ id: ConversationID) {
+        let wasSelected = (selectedConversationID == id)
+        conversations.removeAll { $0.id == id }
+        if wasSelected {
+            // Select the next nearest conversation, or land on the empty placeholder.
+            if let next = conversations.first {
+                selectedConversationID = next.id
+                sidebarSelection = .conversation(next.id)
+            } else {
+                selectedConversationID = nil
+                sidebarSelection = nil
+            }
+        }
+    }
+
+    func deleteAllConversations() {
+        conversations.removeAll()
+        selectedConversationID = nil
+        sidebarSelection = nil
+    }
+
     private func slug(from text: String) -> String {
         let allowed = Set("abcdefghijklmnopqrstuvwxyz0123456789-")
         let lower = text.lowercased()
