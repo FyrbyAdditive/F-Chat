@@ -15,7 +15,10 @@ struct ChatDetailView: View {
                         conversation: viewModel.conversation,
                         failureForMessageID: viewModel.failedUserMessageID,
                         failureMessage: viewModel.lastError,
-                        onRetry: { viewModel.retryLastFailedMessage() }
+                        onRetry: { viewModel.retryLastFailedMessage() },
+                        streamingMessageID: viewModel.isStreaming
+                            ? viewModel.conversation.messages.last?.id
+                            : nil
                     )
                     // Force SwiftUI to treat each chat as a fresh subtree
                     // so the ScrollView's preserved scroll offset doesn't
