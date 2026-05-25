@@ -20,4 +20,15 @@ public struct FileIngestor: Sendable {
         // Fallback: try treating as plain text.
         return try PlainTextParser().parse(data: data, filename: filename)
     }
+
+    /// Union of every extension every registered parser recognises. Used by
+    /// the folder-import path to skip files we couldn't make sense of
+    /// anyway (binaries, images, vendored node_modules, etc).
+    public var supportedExtensions: Set<String> {
+        var union: Set<String> = []
+        for parser in parsers {
+            union.formUnion(parser.supportedExtensions)
+        }
+        return union
+    }
 }

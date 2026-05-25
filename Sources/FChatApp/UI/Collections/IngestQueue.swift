@@ -27,10 +27,16 @@ final class IngestQueue {
     var isProcessing: Bool = false
 
     private let store: any CollectionStoreProtocol
+    private let ingestor: FileIngestor
     private var workTask: Task<Void, Never>?
 
-    init(store: any CollectionStoreProtocol) {
+    /// File extensions the ingestor knows how to parse. Used by the UI's
+    /// folder-walk to pre-filter recursively-collected files.
+    var supportedExtensions: Set<String> { ingestor.supportedExtensions }
+
+    init(store: any CollectionStoreProtocol, ingestor: FileIngestor = FileIngestor()) {
         self.store = store
+        self.ingestor = ingestor
     }
 
     /// Add files to the queue and kick the worker if it isn't already running.
@@ -121,7 +127,7 @@ final class IngestQueue {
                         data: data,
                         filename: entry.filename,
                         collectionID: entry.collectionID,
-                        ingestor: FileIngestor(),
+                        ingestor: self.ingestor,
                         chunker: Chunker()
                     )
                     self.entries[nextIndex].status = .succeeded
@@ -141,5 +147,107 @@ final class IngestQueue {
             }
         }
         return error.localizedDescription
+    }
+}
+
+/// Expand a list of URLs that may include folders into a flat list of
+/// file URLs ready to enqueue. Folders are walked recursively; hidden
+/// files (`.git`, `.DS_Store`, dotfiles) are skipped; files whose
+/// extension isn't recognised by `supportedExtensions` are skipped; files
+/// larger than `maxBytes` are skipped (default 16 MB — a single ingest of
+/// a 100 MB binary would otherwise stall the queue and blow embedding
+/// budgets).
+///
+/// Returns the expanded URL list plus a count of files that were skipped
+/// (so the caller can surface "imported 42 of 187 files" without losing
+/// the user's trust).
+public struct IngestFolderExpander {
+    public var supportedExtensions: Set<String>
+    public var maxBytes: Int
+    public var skipHidden: Bool
+
+    public init(
+        supportedExtensions: Set<String>,
+        maxBytes: Int = 16 * 1024 * 1024,
+        skipHidden: Bool = true
+    ) {
+        self.supportedExtensions = supportedExtensions
+        self.maxBytes = maxBytes
+        self.skipHidden = skipHidden
+    }
+
+    public struct Result {
+        public var urls: [URL]
+        public var skippedHidden: Int
+        public var skippedUnknownType: Int
+        public var skippedTooBig: Int
+    }
+
+    public func expand(_ urls: [URL]) -> Result {
+        var collected: [URL] = []
+        var skippedHidden = 0
+        var skippedUnknown = 0
+        var skippedTooBig = 0
+        let fm = FileManager.default
+
+        for url in urls {
+            var isDir: ObjCBool = false
+            guard fm.fileExists(atPath: url.path, isDirectory: &isDir) else { continue }
+            if isDir.boolValue {
+                guard let walker = fm.enumerator(
+                    at: url,
+                    includingPropertiesForKeys: [.isRegularFileKey, .fileSizeKey],
+                    options: skipHidden ? [.skipsHiddenFiles] : []
+                ) else { continue }
+                for case let fileURL as URL in walker {
+                    let (kept, reason) = consider(fileURL, fm: fm)
+                    if kept {
+                        collected.append(fileURL)
+                    } else {
+                        switch reason {
+                        case .hidden: skippedHidden += 1
+                        case .unknownType: skippedUnknown += 1
+                        case .tooBig: skippedTooBig += 1
+                        case .notRegularFile: break
+                        }
+                    }
+                }
+            } else {
+                let (kept, reason) = consider(url, fm: fm)
+                if kept {
+                    collected.append(url)
+                } else {
+                    switch reason {
+                    case .hidden: skippedHidden += 1
+                    case .unknownType: skippedUnknown += 1
+                    case .tooBig: skippedTooBig += 1
+                    case .notRegularFile: break
+                    }
+                }
+            }
+        }
+        return Result(
+            urls: collected,
+            skippedHidden: skippedHidden,
+            skippedUnknownType: skippedUnknown,
+            skippedTooBig: skippedTooBig
+        )
+    }
+
+    private enum SkipReason { case hidden, unknownType, tooBig, notRegularFile }
+
+    private func consider(_ url: URL, fm: FileManager) -> (kept: Bool, reason: SkipReason) {
+        if skipHidden && url.lastPathComponent.hasPrefix(".") {
+            return (false, .hidden)
+        }
+        let ext = url.pathExtension.lowercased()
+        guard supportedExtensions.contains(ext) else {
+            return (false, .unknownType)
+        }
+        if let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey]) {
+            if values.isRegularFile != true { return (false, .notRegularFile) }
+            if let size = values.fileSize, size > maxBytes { return (false, .tooBig) }
+        }
+        return (true, .hidden) // reason unused on the success branch
     }
 }

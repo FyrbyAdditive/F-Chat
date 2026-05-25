@@ -354,19 +354,30 @@ private struct IngestDropTarget: View {
 
     @State private var isTargeted: Bool = false
     @State private var showFilePicker: Bool = false
+    @State private var showFolderPicker: Bool = false
+    @State private var lastSkipMessage: String?
 
     var body: some View {
         VStack(spacing: 6) {
             Image(systemName: "arrow.down.doc.fill")
                 .font(.system(size: 24))
                 .foregroundStyle(.secondary)
-            Text("Drop files here")
+            Text("Drop files or folders here")
                 .font(.callout.bold())
-            Text("PDF, .md, .txt, source code, .docx / .pptx (parsers in progress)")
+            Text("PDF, .md, .txt, source code. Folders are walked recursively; hidden files and unsupported types are skipped.")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
-            Button("Choose files…") { showFilePicker = true }
-                .controlSize(.small)
+                .multilineTextAlignment(.center)
+            HStack(spacing: 8) {
+                Button("Choose files…") { showFilePicker = true }
+                Button("Choose folder…") { showFolderPicker = true }
+            }
+            .controlSize(.small)
+            if let skipped = lastSkipMessage {
+                Text(skipped)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
         }
         .frame(maxWidth: .infinity, minHeight: 100)
         .padding()
@@ -389,9 +400,16 @@ private struct IngestDropTarget: View {
             allowsMultipleSelection: true
         ) { result in
             if case .success(let urls) = result {
-                let queue = ingestQueue()
-                queue.enqueue(urls: urls, into: collectionID)
-                refreshTrigger += 1
+                enqueueExpanded(urls)
+            }
+        }
+        .fileImporter(
+            isPresented: $showFolderPicker,
+            allowedContentTypes: [.folder],
+            allowsMultipleSelection: true
+        ) { result in
+            if case .success(let urls) = result {
+                enqueueExpanded(urls)
             }
         }
     }
@@ -405,10 +423,39 @@ private struct IngestDropTarget: View {
                 }
             }
             guard !urls.isEmpty else { return }
-            let queue = ingestQueue()
-            queue.enqueue(urls: urls, into: collectionID)
+            enqueueExpanded(urls)
+        }
+    }
+
+    /// Walk any folders in `urls`, filter by supported extensions, and
+    /// enqueue. Surfaces a small "skipped N" status so the user knows
+    /// when a recursive drop excluded a bunch of non-ingestable files.
+    @MainActor
+    private func enqueueExpanded(_ urls: [URL]) {
+        let queue = ingestQueue()
+        let expander = IngestFolderExpander(supportedExtensions: queue.supportedExtensions)
+        let result = expander.expand(urls)
+        if !result.urls.isEmpty {
+            queue.enqueue(urls: result.urls, into: collectionID)
             refreshTrigger += 1
         }
+        lastSkipMessage = skipSummary(result: result)
+    }
+
+    private func skipSummary(result: IngestFolderExpander.Result) -> String? {
+        var parts: [String] = []
+        if !result.urls.isEmpty {
+            parts.append("queued \(result.urls.count)")
+        }
+        let totalSkipped = result.skippedHidden + result.skippedUnknownType + result.skippedTooBig
+        if totalSkipped > 0 {
+            var detail: [String] = []
+            if result.skippedUnknownType > 0 { detail.append("\(result.skippedUnknownType) unsupported") }
+            if result.skippedTooBig > 0 { detail.append("\(result.skippedTooBig) too large") }
+            if result.skippedHidden > 0 { detail.append("\(result.skippedHidden) hidden") }
+            parts.append("skipped \(totalSkipped) (\(detail.joined(separator: ", ")))")
+        }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
     private func loadFileURL(from provider: NSItemProvider) async -> URL? {
