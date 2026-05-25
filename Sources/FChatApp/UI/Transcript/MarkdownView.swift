@@ -5,64 +5,227 @@ import Markdown
 /// views. Inline runs are composed into a single `AttributedString` per
 /// paragraph so wrapping behaves naturally; block elements (headings, lists,
 /// code blocks, blockquotes, tables, rules) get bespoke layouts.
+///
+/// Streaming-aware: long sources are parsed on a detached background task and
+/// cached as a value-typed `[ParsedBlock]` snapshot. Short sources take a
+/// synchronous fast-path so cold-loads of persisted messages don't flash empty.
 struct MarkdownView: View {
     let source: String
 
+    /// Sources shorter than this render inline (fast-path) — parse cost is
+    /// negligible and a one-frame flash on cold-load would be visible.
+    private static let fastPathThreshold: Int = 4000
+
+    /// Minimum interval between background parses while streaming. ~30Hz —
+    /// imperceptible lag, bounded CPU.
+    private static let throttleInterval: Duration = .milliseconds(33)
+
+    @State private var blocks: [ParsedBlock] = []
+    @State private var parsedLength: Int = -1
+    @State private var parseTask: Task<Void, Never>?
+    @State private var lastParseAt: ContinuousClock.Instant?
+
     var body: some View {
-        let document = Document(parsing: source, options: [.parseBlockDirectives])
+        Group {
+            if source.count < Self.fastPathThreshold {
+                // Fast path: parse inline. Cost is negligible for short text,
+                // and avoids the one-frame flash from async parsing on cold
+                // load of a persisted short message.
+                renderBlocks(MarkdownParser.parse(source))
+            } else {
+                renderBlocks(blocks)
+            }
+        }
+        .onAppear {
+            guard source.count >= Self.fastPathThreshold else { return }
+            scheduleParse(force: true)
+        }
+        .onChange(of: source) { _, _ in
+            guard source.count >= Self.fastPathThreshold else { return }
+            scheduleParse(force: false)
+        }
+        .onDisappear {
+            parseTask?.cancel()
+            parseTask = nil
+        }
+    }
+
+    @ViewBuilder
+    private func renderBlocks(_ blocks: [ParsedBlock]) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            ForEach(Array(document.blockChildren.enumerated()), id: \.offset) { _, block in
-                BlockRenderer(block: block)
+            ForEach(Array(blocks.enumerated()), id: \.offset) { _, block in
+                ParsedBlockView(block: block)
+            }
+        }
+    }
+
+    private func scheduleParse(force: Bool) {
+        // Skip if a parse for this exact length already landed and the source
+        // hasn't changed beyond that.
+        if !force, parsedLength == source.count { return }
+
+        // Throttle: if we just parsed, delay until the throttle window passes.
+        let now = ContinuousClock.now
+        let delay: Duration
+        if let last = lastParseAt {
+            let elapsed = last.duration(to: now)
+            delay = elapsed < Self.throttleInterval ? Self.throttleInterval - elapsed : .zero
+        } else {
+            delay = .zero
+        }
+
+        parseTask?.cancel()
+        let snapshot = source
+        parseTask = Task.detached(priority: .userInitiated) { [snapshot] in
+            if delay > .zero {
+                try? await Task.sleep(for: delay)
+            }
+            if Task.isCancelled { return }
+            let parsed = MarkdownParser.parse(snapshot)
+            if Task.isCancelled { return }
+            await MainActor.run {
+                self.blocks = parsed
+                self.parsedLength = snapshot.count
+                self.lastParseAt = ContinuousClock.now
             }
         }
     }
 }
 
-private struct BlockRenderer: View {
-    let block: any BlockMarkup
+// MARK: - ParsedBlock (Sendable snapshot of the parsed markdown)
+
+/// Value-typed snapshot of a single rendered block. `swift-markdown`'s
+/// `Markup` protocol is not `Sendable`, so we eagerly convert to this enum on
+/// the parse thread and ship it back to MainActor for rendering.
+enum ParsedBlock: Sendable, Equatable {
+    case heading(level: Int, content: AttributedString)
+    case paragraph(AttributedString)
+    case unorderedList([ParsedListItem])
+    case orderedList(startIndex: Int, items: [ParsedListItem])
+    case codeBlock(language: String?, source: String)
+    case blockQuote([ParsedBlock])
+    case thematicBreak
+    case table(header: [AttributedString], rows: [[AttributedString]])
+    case htmlBlock(String)
+    /// Fallback for block kinds we don't render specially (block directives,
+    /// future extensions). Carries the source-formatted text.
+    case fallback(String)
+}
+
+struct ParsedListItem: Sendable, Equatable {
+    let children: [ParsedBlock]
+}
+
+// MARK: - MarkdownParser (pure, off-main-safe)
+
+/// Pure function from markdown source to a `Sendable` block snapshot. Safe to
+/// call from any actor; the returned value crosses isolation boundaries
+/// freely.
+enum MarkdownParser {
+    static func parse(_ source: String) -> [ParsedBlock] {
+        let document = Document(parsing: source, options: [.parseBlockDirectives])
+        return document.blockChildren.map(convertBlock)
+    }
+
+    private static func convertBlock(_ block: any BlockMarkup) -> ParsedBlock {
+        switch block {
+        case let heading as Heading:
+            return .heading(
+                level: heading.level,
+                content: InlineRenderer.attributed(from: heading.inlineChildren)
+            )
+
+        case let paragraph as Paragraph:
+            return .paragraph(InlineRenderer.attributed(from: paragraph.inlineChildren))
+
+        case let list as UnorderedList:
+            let items: [ParsedListItem] = list.listItems.map(convertListItem)
+            return .unorderedList(items)
+
+        case let list as OrderedList:
+            let items: [ParsedListItem] = list.listItems.map(convertListItem)
+            return .orderedList(startIndex: Int(list.startIndex), items: items)
+
+        case let code as CodeBlock:
+            return .codeBlock(language: code.language, source: code.code)
+
+        case let quote as BlockQuote:
+            let children: [ParsedBlock] = quote.blockChildren.map(convertBlock)
+            return .blockQuote(children)
+
+        case is ThematicBreak:
+            return .thematicBreak
+
+        case let table as Markdown.Table:
+            let header: [AttributedString] = table.head.cells.map { cell in
+                InlineRenderer.attributed(from: cell.inlineChildren)
+            }
+            let rows: [[AttributedString]] = table.body.rows.map { row in
+                row.cells.map { cell in
+                    InlineRenderer.attributed(from: cell.inlineChildren)
+                }
+            }
+            return .table(header: header, rows: rows)
+
+        case let htmlBlock as HTMLBlock:
+            return .htmlBlock(htmlBlock.rawHTML)
+
+        default:
+            return .fallback(block.format())
+        }
+    }
+
+    private static func convertListItem(_ item: ListItem) -> ParsedListItem {
+        let children: [ParsedBlock] = item.blockChildren.map(convertBlock)
+        return ParsedListItem(children: children)
+    }
+}
+
+// MARK: - Renderer (pure SwiftUI over ParsedBlock)
+
+private struct ParsedBlockView: View {
+    let block: ParsedBlock
 
     var body: some View {
         switch block {
-        case let heading as Heading:
-            Text(InlineRenderer.attributed(from: heading.inlineChildren))
-                .font(headingFont(for: heading.level))
+        case .heading(let level, let content):
+            Text(content)
+                .font(headingFont(for: level))
                 .fontWeight(.semibold)
                 .textSelection(.enabled)
-                .padding(.top, heading.level == 1 ? 8 : 4)
+                .padding(.top, level == 1 ? 8 : 4)
 
-        case let paragraph as Paragraph:
-            Text(InlineRenderer.attributed(from: paragraph.inlineChildren))
+        case .paragraph(let content):
+            Text(content)
                 .textSelection(.enabled)
                 .fixedSize(horizontal: false, vertical: true)
 
-        case let list as UnorderedList:
-            ListView(items: Array(list.listItems), ordered: false, startIndex: nil)
+        case .unorderedList(let items):
+            ParsedListView(items: items, ordered: false, startIndex: nil)
 
-        case let list as OrderedList:
-            ListView(items: Array(list.listItems), ordered: true, startIndex: Int(list.startIndex))
+        case .orderedList(let startIndex, let items):
+            ParsedListView(items: items, ordered: true, startIndex: startIndex)
 
-        case let code as CodeBlock:
-            CodeBlockView(language: code.language, source: code.code)
+        case .codeBlock(let language, let source):
+            ParsedCodeBlockView(language: language, source: source)
 
-        case let quote as BlockQuote:
-            BlockQuoteView(quote: quote)
+        case .blockQuote(let children):
+            ParsedBlockQuoteView(children: children)
 
-        case is ThematicBreak:
+        case .thematicBreak:
             Divider().padding(.vertical, 4)
 
-        case let table as Markdown.Table:
-            MarkdownTableView(table: table)
+        case .table(let header, let rows):
+            ParsedTableView(header: header, rows: rows)
 
-        case let htmlBlock as HTMLBlock:
-            Text(htmlBlock.rawHTML)
+        case .htmlBlock(let raw):
+            Text(raw)
                 .font(.system(.body, design: .monospaced))
                 .textSelection(.enabled)
                 .foregroundStyle(.secondary)
 
-        default:
-            // Fallback: render the raw text. Catches block directives, custom
-            // extensions, and anything swift-markdown adds in the future.
-            Text(block.format())
+        case .fallback(let text):
+            Text(text)
                 .textSelection(.enabled)
         }
     }
@@ -79,8 +242,8 @@ private struct BlockRenderer: View {
     }
 }
 
-private struct ListView: View {
-    let items: [ListItem]
+private struct ParsedListView: View {
+    let items: [ParsedListItem]
     let ordered: Bool
     let startIndex: Int?
 
@@ -93,8 +256,8 @@ private struct ListView: View {
                         .foregroundStyle(.secondary)
                         .frame(minWidth: 16, alignment: .trailing)
                     VStack(alignment: .leading, spacing: 2) {
-                        ForEach(Array(item.blockChildren.enumerated()), id: \.offset) { _, child in
-                            BlockRenderer(block: child)
+                        ForEach(Array(item.children.enumerated()), id: \.offset) { _, child in
+                            ParsedBlockView(block: child)
                         }
                     }
                 }
@@ -103,14 +266,12 @@ private struct ListView: View {
     }
 
     private func bullet(for index: Int) -> String {
-        if ordered {
-            return "\((startIndex ?? 1) + index)."
-        }
+        if ordered { return "\((startIndex ?? 1) + index)." }
         return "•"
     }
 }
 
-private struct CodeBlockView: View {
+private struct ParsedCodeBlockView: View {
     let language: String?
     let source: String
 
@@ -142,8 +303,8 @@ private struct CodeBlockView: View {
     }
 }
 
-private struct BlockQuoteView: View {
-    let quote: BlockQuote
+private struct ParsedBlockQuoteView: View {
+    let children: [ParsedBlock]
 
     var body: some View {
         HStack(spacing: 8) {
@@ -151,8 +312,8 @@ private struct BlockQuoteView: View {
                 .fill(Color.accentColor.opacity(0.4))
                 .frame(width: 3)
             VStack(alignment: .leading, spacing: 6) {
-                ForEach(Array(quote.blockChildren.enumerated()), id: \.offset) { _, child in
-                    BlockRenderer(block: child)
+                ForEach(Array(children.enumerated()), id: \.offset) { _, child in
+                    ParsedBlockView(block: child)
                 }
             }
             .foregroundStyle(.secondary)
@@ -160,17 +321,16 @@ private struct BlockQuoteView: View {
     }
 }
 
-private struct MarkdownTableView: View {
-    let table: Markdown.Table
+private struct ParsedTableView: View {
+    let header: [AttributedString]
+    let rows: [[AttributedString]]
 
     var body: some View {
-        let rows = Array(table.body.rows)
-        let headerCells = Array(table.head.cells).map { Array($0.inlineChildren) }
         VStack(alignment: .leading, spacing: 0) {
-            if !headerCells.isEmpty {
+            if !header.isEmpty {
                 HStack(alignment: .firstTextBaseline, spacing: 12) {
-                    ForEach(Array(headerCells.enumerated()), id: \.offset) { _, inlines in
-                        Text(InlineRenderer.attributed(from: inlines))
+                    ForEach(Array(header.enumerated()), id: \.offset) { _, cell in
+                        Text(cell)
                             .font(.callout.bold())
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
@@ -181,8 +341,8 @@ private struct MarkdownTableView: View {
             }
             ForEach(Array(rows.enumerated()), id: \.offset) { rowIndex, row in
                 HStack(alignment: .firstTextBaseline, spacing: 12) {
-                    ForEach(Array(row.cells.enumerated()), id: \.offset) { _, cell in
-                        Text(InlineRenderer.attributed(from: Array(cell.inlineChildren)))
+                    ForEach(Array(row.enumerated()), id: \.offset) { _, cell in
+                        Text(cell)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
@@ -197,6 +357,8 @@ private struct MarkdownTableView: View {
         )
     }
 }
+
+// MARK: - InlineRenderer (pure)
 
 enum InlineRenderer {
     static func attributed(from inlines: some Sequence<InlineMarkup>) -> AttributedString {

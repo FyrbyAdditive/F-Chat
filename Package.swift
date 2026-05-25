@@ -123,5 +123,9 @@ let package = Package(
             ],
             resources: [.process("Fixtures")]
         ),
+        .testTarget(
+            name: "FChatAppTests",
+            dependencies: ["FChatApp"]
+        ),
     ]
 )
