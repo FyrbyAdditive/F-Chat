@@ -321,6 +321,16 @@ final class ChatViewModel {
         let tokenizer = TokenizerCache.shared.get(modelID: modelID)
         let builder = RequestPayloadBuilder(tokenizer: tokenizer)
         let instructions = composeInstructions(language: language)
+        // Trigger placeholder-substitution of older tool results when the
+        // projected payload is past half of the safe budget. The two most
+        // recent results stay verbatim so the model can keep working with
+        // its latest data; older bodies are replaced with a tiny JSON
+        // placeholder. Mirrors the Anthropic `clear_tool_uses` pattern.
+        let clearOptions = ClearOptions(
+            triggerTokens: max(1, budget.safeInputBudget / 2),
+            keepRecentResults: 2,
+            tokenizer: tokenizer
+        )
 
         // Determine the active compaction state: keep range starts after the
         // most recent compaction's upper bound, if any.
@@ -367,7 +377,8 @@ final class ChatViewModel {
                         conversation: conversation,
                         draftUserText: "",
                         summary: summary,
-                        keepRange: firstKeepableIndex..<currentMessageCount
+                        keepRange: firstKeepableIndex..<currentMessageCount,
+                        clearOptions: clearOptions
                     ),
                     tools: toolDefinitions
                 )
@@ -401,7 +412,8 @@ final class ChatViewModel {
             conversation: conversation,
             draftUserText: "",
             summary: summary,
-            keepRange: keepLowerBound..<currentMessageCount
+            keepRange: keepLowerBound..<currentMessageCount,
+            clearOptions: clearOptions
         )
         // Re-project with the now-current shape and cache for the footer.
         let finalProjection = builder.project(

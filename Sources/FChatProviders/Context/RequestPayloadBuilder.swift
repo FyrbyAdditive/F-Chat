@@ -33,7 +33,8 @@ public struct RequestPayloadBuilder: Sendable {
         conversation: Conversation,
         draftUserText: String,
         summary: String? = nil,
-        keepRange: Range<Int>? = nil
+        keepRange: Range<Int>? = nil,
+        clearOptions: ClearOptions? = nil
     ) -> [InputItem] {
         var input: [InputItem] = []
 
@@ -60,6 +61,10 @@ public struct RequestPayloadBuilder: Sendable {
         let trimmed = draftUserText.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmed.isEmpty {
             input.append(.message(role: .user, content: [.inputText(trimmed)]))
+        }
+
+        if let clearOptions {
+            input = applyClearing(to: input, options: clearOptions)
         }
 
         return input
@@ -221,6 +226,106 @@ public struct RequestPayloadBuilder: Sendable {
             }
         }
         return total
+    }
+
+    // MARK: - Threshold-clear of older tool results
+
+    private func applyClearing(to items: [InputItem], options: ClearOptions) -> [InputItem] {
+        // Locate every `.functionCallOutput` item and its position.
+        var resultPositions: [Int] = []
+        for (i, item) in items.enumerated() {
+            if case .functionCallOutput = item { resultPositions.append(i) }
+        }
+        // Nothing to do if we have at-or-under the keep window.
+        guard resultPositions.count > options.keepRecentResults else { return items }
+
+        // Cheap upper bound on total token cost: tokenise the text payload
+        // of every item once. Cheap because tool results dominate cost and
+        // we'd be tokenising them anyway for the placeholder.
+        func tokens(of item: InputItem) -> Int {
+            switch item {
+            case .message(_, let content):
+                return content.reduce(0) { acc, part in
+                    switch part {
+                    case .inputText(let s), .outputText(let s):
+                        return acc + options.tokenizer.countTokens(in: s)
+                    case .inputImage:
+                        return acc + 150
+                    case .inputImageData:
+                        return acc + 150
+                    }
+                }
+            case .functionCall(_, _, let argsJSON):
+                return options.tokenizer.countTokens(in: argsJSON)
+            case .functionCallOutput(_, let outputJSON):
+                return options.tokenizer.countTokens(in: outputJSON)
+            case .reasoning:
+                // Never include reasoning items in the budget — they're
+                // dropped from outgoing payloads in our shape anyway.
+                return 0
+            }
+        }
+
+        var perItemTokens = items.map(tokens(of:))
+        var total = perItemTokens.reduce(0, +)
+        guard total > options.triggerTokens else { return items }
+
+        // Clear oldest results first, preserving the last `keepRecentResults`.
+        let clearUntil = resultPositions.count - options.keepRecentResults
+        var mutated = items
+        var cleared = 0
+        for posIdx in 0..<clearUntil {
+            guard total > options.triggerTokens else { break }
+            let i = resultPositions[posIdx]
+            guard case .functionCallOutput(let callID, let originalJSON) = mutated[i] else { continue }
+            // Skip already-cleared placeholders — idempotent if assemble runs
+            // a second time over the same conversation snapshot.
+            if originalJSON.contains("\"_fchat_cleared\":true") { continue }
+            let originalTokens = perItemTokens[i]
+            let placeholder = clearedPlaceholderJSON(
+                callID: callID,
+                originalTokens: originalTokens
+            )
+            mutated[i] = .functionCallOutput(callID: callID, outputJSON: placeholder)
+            let newTokens = options.tokenizer.countTokens(in: placeholder)
+            total -= (originalTokens - newTokens)
+            perItemTokens[i] = newTokens
+            cleared += 1
+        }
+        if cleared > 0 {
+            FileHandle.standardError.write(Data(
+                "[FChat] cleared \(cleared) older tool result(s); projected tokens now \(total) (trigger \(options.triggerTokens))\n".utf8
+            ))
+        }
+        return mutated
+    }
+
+    private func clearedPlaceholderJSON(callID: String, originalTokens: Int) -> String {
+        // Escape the call_id defensively though they're already opaque strings.
+        let safeCallID = callID
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+        return "{\"_fchat_cleared\":true,\"call_id\":\"\(safeCallID)\",\"original_tokens\":\(originalTokens),\"hint\":\"This tool result was cleared by F-Chat to save context. Re-call the tool with the same arguments to refetch.\"}"
+    }
+}
+
+// MARK: - ClearOptions
+
+/// Opt-in policy for `RequestPayloadBuilder.assemble(...)` to replace older
+/// tool outputs with small placeholders when the assembled payload exceeds
+/// `triggerTokens`. Mirrors Anthropic's `clear_tool_uses_20250919` behaviour:
+/// the most-recent N results are preserved verbatim; the oldest are cleared
+/// first. The matching `function_call` items are never touched, so the model
+/// still sees what it called and can re-call.
+public struct ClearOptions: Sendable {
+    public var triggerTokens: Int
+    public var keepRecentResults: Int
+    public var tokenizer: any Tokenizer
+
+    public init(triggerTokens: Int, keepRecentResults: Int = 2, tokenizer: any Tokenizer) {
+        self.triggerTokens = max(0, triggerTokens)
+        self.keepRecentResults = max(0, keepRecentResults)
+        self.tokenizer = tokenizer
     }
 }
 

@@ -125,4 +125,131 @@ struct RequestPayloadBuilderTests {
         #expect(projection.historyTokens >= 20)
         #expect(projection.totalTokens > projection.draftTokens)
     }
+
+    // MARK: - ClearOptions / threshold clearing
+
+    /// Build a conversation with N (call, result) pairs each having a sizeable
+    /// outputJSON. Used to drive the threshold-clear logic.
+    private func conversationWithToolPairs(_ n: Int, resultBodySize: Int = 4000) -> Conversation {
+        var messages: [Message] = []
+        for i in 0..<n {
+            let callID = "call_\(i)"
+            messages.append(Message(role: .user, contentItems: [.text("ask \(i)")]))
+            let bigResult = String(repeating: "x", count: resultBodySize)
+            messages.append(Message(role: .assistant, contentItems: [
+                .toolCall(ToolCallRecord(id: callID, name: "web_fetch", argumentsJSON: #"{"url":"https://e/\#(i)"}"#, status: .succeeded)),
+                .toolResult(ToolResultRecord(callID: callID, outputJSON: bigResult, isError: false)),
+                .text("done \(i)"),
+            ]))
+        }
+        return makeConversation(messages: messages)
+    }
+
+    @Test func assembleWithoutClearOptionsIsUnchanged() {
+        let convo = conversationWithToolPairs(3)
+        let plain = builder.assemble(conversation: convo, draftUserText: "")
+        let opted = builder.assemble(conversation: convo, draftUserText: "", clearOptions: nil)
+        #expect(plain == opted)
+    }
+
+    @Test func assembleClearsOldestResultsAboveTrigger() {
+        // 5 tool result pairs of 4000 chars each → at HeuristicTokenizer
+        // 1 token/4 chars, ~1000 tokens per result, ~5000 history total.
+        // Trigger at 3000 with keep=2 should clear the oldest 3.
+        let convo = conversationWithToolPairs(5)
+        let options = ClearOptions(triggerTokens: 3_000, keepRecentResults: 2, tokenizer: HeuristicTokenizer())
+        let items = builder.assemble(
+            conversation: convo,
+            draftUserText: "",
+            clearOptions: options
+        )
+
+        // Extract every functionCallOutput in order.
+        let outputs: [(String, String)] = items.compactMap { item in
+            if case .functionCallOutput(let id, let json) = item { return (id, json) }
+            return nil
+        }
+        #expect(outputs.count == 5, "all 5 outputs are still present, just some cleared")
+
+        // First three are placeholders, last two are verbatim.
+        for (i, (callID, json)) in outputs.enumerated() {
+            if i < 3 {
+                #expect(json.contains("\"_fchat_cleared\":true"), "result \(i) should be cleared placeholder; got: \(json.prefix(200))")
+                #expect(json.contains("\"call_id\":\"\(callID)\""), "placeholder should embed the call id")
+                #expect(json.contains("\"original_tokens\""), "placeholder should embed original token count")
+                #expect(json.contains("\"hint\""), "placeholder should embed re-call hint")
+            } else {
+                #expect(!json.contains("\"_fchat_cleared\""), "result \(i) should be verbatim")
+                #expect(json.count > 100, "verbatim result should still be its original size")
+            }
+        }
+    }
+
+    @Test func assembleLeavesToolCallsUntouched() {
+        // The matching `function_call` must always pass through. Only the
+        // `function_call_output` is ever cleared.
+        let convo = conversationWithToolPairs(4)
+        let options = ClearOptions(triggerTokens: 100, keepRecentResults: 1, tokenizer: HeuristicTokenizer())
+        let items = builder.assemble(conversation: convo, draftUserText: "", clearOptions: options)
+        let calls: [String] = items.compactMap { item in
+            if case .functionCall(let id, _, _) = item { return id }
+            return nil
+        }
+        #expect(calls == ["call_0", "call_1", "call_2", "call_3"])
+    }
+
+    @Test func assembleClearingBelowTriggerDoesNothing() {
+        let convo = conversationWithToolPairs(2, resultBodySize: 100)
+        let options = ClearOptions(triggerTokens: 100_000, keepRecentResults: 2, tokenizer: HeuristicTokenizer())
+        let items = builder.assemble(conversation: convo, draftUserText: "", clearOptions: options)
+        for item in items {
+            if case .functionCallOutput(_, let json) = item {
+                #expect(!json.contains("\"_fchat_cleared\""))
+            }
+        }
+    }
+
+    @Test func assembleClearingIsIdempotent() {
+        // Running the clearing pass twice over the same conversation shape
+        // should not double-clear (placeholders already-cleared are detected
+        // and skipped). This guards against accidental token inflation when
+        // a turn re-assembles after a partial mutation.
+        let convo = conversationWithToolPairs(4)
+        let options = ClearOptions(triggerTokens: 500, keepRecentResults: 2, tokenizer: HeuristicTokenizer())
+        let first = builder.assemble(conversation: convo, draftUserText: "", clearOptions: options)
+        let second = builder.assemble(conversation: convo, draftUserText: "", clearOptions: options)
+        // Counts of each kind should match exactly.
+        let firstClearedCount = first.filter { item in
+            if case .functionCallOutput(_, let json) = item { return json.contains("\"_fchat_cleared\"") }
+            return false
+        }.count
+        let secondClearedCount = second.filter { item in
+            if case .functionCallOutput(_, let json) = item { return json.contains("\"_fchat_cleared\"") }
+            return false
+        }.count
+        #expect(firstClearedCount == secondClearedCount)
+    }
+
+    @Test func assembleKeepRangeRespectsClearing() {
+        // If keepRange already drops older history, the clearer sees fewer
+        // items and only clears within the kept window.
+        let convo = conversationWithToolPairs(5)
+        let options = ClearOptions(triggerTokens: 200, keepRecentResults: 1, tokenizer: HeuristicTokenizer())
+        // Skip the first 4 messages (2 pairs of user+assistant rows).
+        let items = builder.assemble(
+            conversation: convo,
+            draftUserText: "",
+            keepRange: 4..<convo.messages.count,
+            clearOptions: options
+        )
+        let outputs = items.compactMap { item -> String? in
+            if case .functionCallOutput(_, let json) = item { return json }
+            return nil
+        }
+        // 3 results remain in the kept window; keep last 1 verbatim, clear 2.
+        #expect(outputs.count == 3)
+        #expect(outputs[0].contains("\"_fchat_cleared\""))
+        #expect(outputs[1].contains("\"_fchat_cleared\""))
+        #expect(!outputs[2].contains("\"_fchat_cleared\""))
+    }
 }

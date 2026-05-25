@@ -24,6 +24,10 @@ final class AppEnvironment {
     var ingestQueue: IngestQueue?
     let ingestor: FileIngestor
     let pageExtractor: any PageExtractor
+    /// In-process LRU of web_fetch results so a re-fetch of the same URL
+    /// in the same session skips both the network and the (full-body)
+    /// token cost.
+    let webFetchCache: WebFetchCache
     let searchProvider: any WebSearchProvider
     let stateStore: AppStateStore
     var providerRecords: [ProviderRecord] {
@@ -85,6 +89,7 @@ final class AppEnvironment {
         self.collectionStore = resolvedStore
         self.ingestor = FileIngestor()
         self.pageExtractor = WebKitPageExtractor()
+        self.webFetchCache = WebFetchCache()
         self.searchProvider = DuckDuckGoProvider()
         self.stateStore = AppStateStore()
         // Restore from disk if present; otherwise fall back to defaults.
@@ -232,7 +237,7 @@ final class AppEnvironment {
 
     func registerBuiltInTools() async {
         let webSearch = WebSearchTool(provider: searchProvider)
-        let webFetch = WebFetchTool(extractor: pageExtractor)
+        let webFetch = WebFetchTool(extractor: pageExtractor, cache: webFetchCache)
         let rag = RAGSearchTool(retriever: DynamicAttachedRAGRetriever(
             store: collectionStore,
             attachedAccessor: { [weak self] in
