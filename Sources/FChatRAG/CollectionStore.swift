@@ -157,6 +157,19 @@ public actor CollectionStore: CollectionStoreProtocol {
         vectorStores[id] = nil
         embedders[id] = nil
     }
+
+    public func renameCollection(_ id: CollectionID, to newName: String) async throws {
+        let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { throw RenameError.emptyName }
+        guard var existing = collections[id] else { throw IngestError.unknownCollection }
+        existing.name = trimmed
+        existing.updatedAt = .now
+        collections[id] = existing
+    }
+}
+
+public enum RenameError: Error, Sendable, Equatable {
+    case emptyName
 }
 
 public enum IngestError: Error, Sendable, Equatable {

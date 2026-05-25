@@ -23,6 +23,10 @@ public protocol CollectionStoreProtocol: Actor {
 
     func deleteCollection(_ id: CollectionID) async throws
 
+    /// Rename a collection. The new name must be non-empty after trimming;
+    /// callers should validate before invoking. Updates `updatedAt`.
+    func renameCollection(_ id: CollectionID, to newName: String) async throws
+
     /// All documents in a collection, oldest-first.
     func documents(in id: CollectionID) -> [RAGDocument]
 

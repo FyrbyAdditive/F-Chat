@@ -17,6 +17,11 @@ struct CollectionsView: View {
     @State private var pendingCollectionDelete: CollectionID?
     @State private var pendingDocumentDelete: DocumentID?
     @State private var refreshTrigger = 0
+    /// Id of the collection being renamed in place, or nil. When non-nil
+    /// the matching row swaps Text for a focused TextField.
+    @State private var renamingCollectionID: CollectionID?
+    @State private var collectionRenameDraft: String = ""
+    @FocusState private var collectionRenameFocus: CollectionID?
 
     var body: some View {
         HStack(spacing: 0) {
@@ -98,14 +103,34 @@ struct CollectionsView: View {
                     } else {
                         ForEach(collections) { collection in
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(collection.name)
-                                    .font(.body)
+                                if renamingCollectionID == collection.id {
+                                    TextField("Collection name", text: $collectionRenameDraft)
+                                        .textFieldStyle(.plain)
+                                        .font(.body)
+                                        .focused($collectionRenameFocus, equals: collection.id)
+                                        .onSubmit { commitCollectionRename() }
+                                        .onExitCommand { cancelCollectionRename() }
+                                        .onChange(of: collectionRenameFocus) { _, newFocus in
+                                            if newFocus != collection.id && renamingCollectionID == collection.id {
+                                                commitCollectionRename()
+                                            }
+                                        }
+                                } else {
+                                    Text(collection.name)
+                                        .font(.body)
+                                }
                                 Text("\(collection.embedder.rawValue) · \(collection.dim)d")
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)
                             }
                             .tag(collection.id)
                             .contextMenu {
+                                Button {
+                                    beginCollectionRename(collection)
+                                } label: {
+                                    Label("Rename\u{2026}", systemImage: "pencil")
+                                }
+                                Divider()
                                 Button(role: .destructive) {
                                     pendingCollectionDelete = collection.id
                                 } label: {
@@ -275,6 +300,39 @@ struct CollectionsView: View {
         }
         let cs = await environment.collectionStore.chunks(of: did)
         await MainActor.run { chunks = cs }
+    }
+
+    // MARK: - Rename
+
+    private func beginCollectionRename(_ collection: RAGCollection) {
+        collectionRenameDraft = collection.name
+        renamingCollectionID = collection.id
+        // Defer focus until the TextField is mounted on the next runloop.
+        Task { @MainActor in
+            collectionRenameFocus = collection.id
+        }
+    }
+
+    private func commitCollectionRename() {
+        guard let id = renamingCollectionID else { return }
+        let trimmed = collectionRenameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        let original = collections.first(where: { $0.id == id })?.name ?? ""
+        renamingCollectionID = nil
+        collectionRenameDraft = ""
+        guard !trimmed.isEmpty, trimmed != original else { return }
+        Task {
+            do {
+                try await environment.collectionStore.renameCollection(id, to: trimmed)
+                refreshTrigger += 1
+            } catch {
+                FileHandle.standardError.write(Data("[FChat] rename collection failed: \(error)\n".utf8))
+            }
+        }
+    }
+
+    private func cancelCollectionRename() {
+        renamingCollectionID = nil
+        collectionRenameDraft = ""
     }
 }
 

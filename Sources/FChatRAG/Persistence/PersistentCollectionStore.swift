@@ -110,6 +110,17 @@ public actor PersistentCollectionStore: CollectionStoreProtocol {
         vectorStores[id] = nil
     }
 
+    public func renameCollection(_ id: CollectionID, to newName: String) async throws {
+        let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { throw RenameError.emptyName }
+        try await database.queue.write { db in
+            try db.execute(
+                sql: "UPDATE collections SET name = ?, updated_at = ? WHERE id = ?",
+                arguments: [trimmed, Date.now.timeIntervalSince1970, id.rawValue.uuidString]
+            )
+        }
+    }
+
     // MARK: - Documents / chunks
 
     public func documents(in id: CollectionID) -> [RAGDocument] {
