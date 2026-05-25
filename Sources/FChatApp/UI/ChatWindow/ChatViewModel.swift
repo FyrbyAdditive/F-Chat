@@ -34,6 +34,11 @@ final class ChatViewModel {
     private var streamTask: Task<Void, Never>?
     private var projectionTask: Task<Void, Never>?
     private var firstDeltaAt: Date?
+    /// Memoises per-message token counts so a streaming-induced projection
+    /// re-run only tokenises the message whose content actually changed
+    /// (always the tail). Without this, every ~150ms debounce tick during a
+    /// long reply re-tokenises the whole transcript on the main actor.
+    private let tokenCountCache = MessageTokenCountCache()
 
     init(conversation: Conversation, environment: AppEnvironment) {
         self.conversation = conversation
@@ -67,18 +72,29 @@ final class ChatViewModel {
         let tokenizer = TokenizerCache.shared.get(modelID: modelID)
         let builder = RequestPayloadBuilder(tokenizer: tokenizer)
         let instructions = composeInstructions(language: environment.promptLanguage)
-
+        let language = environment.promptLanguage
         let enabledToolNames = environment.enabledTools
         let registry = environment.toolRegistry
-        Task { @MainActor in
-            let allDefs = await registry.definitions(for: environment.promptLanguage)
+
+        // Snapshot the value-typed inputs and run the expensive BPE walk on a
+        // detached task so it doesn't block the main actor during streaming.
+        // Tool defs come from an actor and have to be fetched first.
+        let conversationSnapshot = self.conversation
+        let draftSnapshot = self.draftText
+        let cache = self.tokenCountCache
+        Task.detached(priority: .userInitiated) { [weak self] in
+            let allDefs = await registry.definitions(for: language)
             let toolDefs = allDefs.filter { enabledToolNames.contains($0.name) }
-            self.projection = builder.project(
-                conversation: self.conversation,
-                draftUserText: self.draftText,
+            let projection = builder.project(
+                conversation: conversationSnapshot,
+                draftUserText: draftSnapshot,
                 instructions: instructions,
-                toolDefinitions: toolDefs
+                toolDefinitions: toolDefs,
+                cache: cache
             )
+            await MainActor.run {
+                self?.projection = projection
+            }
         }
     }
 

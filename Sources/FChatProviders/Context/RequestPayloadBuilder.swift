@@ -153,7 +153,8 @@ public struct RequestPayloadBuilder: Sendable {
         instructions: String,
         toolDefinitions: [ToolDefinition],
         summary: String? = nil,
-        keepRange: Range<Int>? = nil
+        keepRange: Range<Int>? = nil,
+        cache: MessageTokenCountCache? = nil
     ) -> Projection {
         let systemTokens = tokenizer.countTokens(in: instructions)
             + (summary.map { tokenizer.countTokens(in: "Summary of earlier conversation:\n\($0)") } ?? 0)
@@ -166,7 +167,12 @@ public struct RequestPayloadBuilder: Sendable {
             indices = 0..<conversation.messages.count
         }
         for index in indices {
-            historyTokens += countTokens(in: conversation.messages[index])
+            let message = conversation.messages[index]
+            if let cache {
+                historyTokens += cache.countTokens(in: message, using: self)
+            } else {
+                historyTokens += countTokens(in: message)
+            }
         }
         let draftTokens = tokenizer.countTokens(in: draftUserText)
         let toolTokens = toolDefinitions.reduce(0) { sum, def in
@@ -218,3 +224,82 @@ public struct RequestPayloadBuilder: Sendable {
     }
 }
 
+// MARK: - Per-message token-count cache
+
+/// Memoises `RequestPayloadBuilder.countTokens(in: Message)` keyed by a cheap
+/// content fingerprint. Lets `project(...)` skip re-tokenising the entire
+/// transcript on every streaming delta — only the message whose content
+/// changed (always the streaming tail) actually runs through BPE.
+///
+/// Fingerprint is order-of-magnitude derived state — `plainText.count`,
+/// `contentItems.count`, and the sum of tool-call argument lengths. Cheap
+/// to compute and collision-safe for our use (per-message identity is keyed
+/// by `MessageID`; the hash only has to disambiguate that *one* message's
+/// generations of itself, not different messages).
+public final class MessageTokenCountCache: @unchecked Sendable {
+    private struct Entry {
+        let fingerprint: Int
+        let count: Int
+    }
+
+    private var entries: [MessageID: Entry] = [:]
+    private let lock = NSLock()
+
+    public init() {}
+
+    /// Returns the cached count for `message` if its content hasn't changed
+    /// since the last query; otherwise tokenises via `builder` and caches.
+    ///
+    /// Synchronous so `RequestPayloadBuilder.project(...)` can stay sync; the
+    /// lock is held only for the dictionary read/write, never across the
+    /// (potentially expensive) BPE call.
+    public func countTokens(in message: Message, using builder: RequestPayloadBuilder) -> Int {
+        let fingerprint = Self.fingerprint(of: message)
+        lock.lock()
+        if let entry = entries[message.id], entry.fingerprint == fingerprint {
+            lock.unlock()
+            return entry.count
+        }
+        lock.unlock()
+        let count = builder.countTokens(in: message)
+        lock.lock()
+        entries[message.id] = Entry(fingerprint: fingerprint, count: count)
+        lock.unlock()
+        return count
+    }
+
+    /// Drop all cached counts. Call on conversation reload.
+    public func reset() {
+        lock.lock()
+        entries.removeAll(keepingCapacity: true)
+        lock.unlock()
+    }
+
+    private static func fingerprint(of message: Message) -> Int {
+        var hasher = Hasher()
+        hasher.combine(message.contentItems.count)
+        for item in message.contentItems {
+            switch item {
+            case .text(let s):
+                hasher.combine(0)
+                hasher.combine(s.count)
+            case .reasoningSummary(let s):
+                hasher.combine(1)
+                hasher.combine(s.count)
+            case .toolCall(let rec):
+                hasher.combine(2)
+                hasher.combine(rec.argumentsJSON.count)
+                hasher.combine(rec.name.count)
+            case .toolResult(let rec):
+                hasher.combine(3)
+                hasher.combine(rec.outputJSON.count)
+            case .image(let data, _):
+                hasher.combine(4)
+                hasher.combine(data.count)
+            case .attachment:
+                hasher.combine(5)
+            }
+        }
+        return hasher.finalize()
+    }
+}
