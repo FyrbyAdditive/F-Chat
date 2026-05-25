@@ -60,27 +60,35 @@ struct TranscriptView: View {
                 }
                 .padding(.vertical, DesignTokens.panelPadding)
             }
-            // Passive geometry observation: remember the current distance
-            // from the bottom so onScrollPhaseChange can read it. Does
-            // NOT touch isAnchoredToBottom — geometry changes during
-            // streaming are content growth, not user intent.
+            // Geometry handler: asymmetric flag updates.
+            //
+            // - false → true (RE-ENGAGE): allowed any time distance hits
+            //   the threshold. During streaming, content only ever grows,
+            //   so distance can only DECREASE if the user actively scrolled
+            //   down. That's exactly what we want to detect to re-engage
+            //   auto-follow without making the user wait for their gesture
+            //   to settle.
+            //
+            // - true → false (DISENGAGE): NEVER from geometry alone, only
+            //   from a settled user scroll (handled in onScrollPhaseChange).
+            //   Otherwise content growth would race ahead of our scrollTo
+            //   and close the gate forever.
             .onScrollGeometryChange(for: CGFloat.self, of: { geometry in
                 geometry.contentSize.height
                     - (geometry.contentOffset.y + geometry.containerSize.height)
             }, action: { _, distance in
                 latestDistanceFromBottom = distance
+                if !isAnchoredToBottom && distance <= bottomThreshold {
+                    isAnchoredToBottom = true
+                }
             })
-            // The actual gate for "is auto-follow engaged". Driven solely
-            // by user-initiated scrolls — when a scroll gesture (trackpad,
-            // mouse-wheel, scrollbar drag) ends, recompute whether we're
-            // at the bottom and update the flag.
+            // Settled-gesture handler: only path that disengages auto-follow.
+            // When a user scroll comes to rest above the threshold, the user
+            // is reading something earlier and we should stop yanking them
+            // back down on every delta.
             .onScrollPhaseChange { _, newPhase in
-                // .idle = gesture ended (or no gesture in progress).
-                // Other phases (.interacting, .tracking, .decelerating,
-                // .animating) are mid-flight; the user's intent isn't
-                // settled until idle.
-                if newPhase == .idle {
-                    isAnchoredToBottom = latestDistanceFromBottom <= bottomThreshold
+                if newPhase == .idle && latestDistanceFromBottom > bottomThreshold {
+                    isAnchoredToBottom = false
                 }
             }
             .onChange(of: fingerprint) { _, _ in
