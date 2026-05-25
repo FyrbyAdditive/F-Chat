@@ -9,26 +9,38 @@ struct TranscriptView: View {
     /// Indices of compaction record ids whose dropped originals are currently
     /// expanded by the user. Empty by default — originals are collapsed.
     @State private var expandedCompactions: Set<UUID> = []
-    /// True when streaming deltas should auto-scroll the view to the
-    /// bottom. Flips off only when the user actively scrolls up; flips
-    /// back on when the user scrolls down to within `bottomThreshold` of
-    /// the bottom (or sends a new message — handled separately).
+    /// True when streaming deltas should auto-scroll to the bottom.
     ///
-    /// Critically this does NOT flip based on geometry alone — content
-    /// growth during streaming naturally increases the distance from the
-    /// bottom, and reading that as "user is scrolled up" would close the
-    /// gate forever. We only react to user-initiated scrolls via
-    /// `onScrollPhaseChange`.
-    @State private var isAnchoredToBottom: Bool = true
+    /// State machine, driven entirely by scroll-geometry deltas:
+    ///
+    /// - **Re-engage (false → true)**: any time current `distance ≤
+    ///   bottomThreshold`. Covers the user scrolling all the way down,
+    ///   content shrinking back inside the viewport, and our own
+    ///   `scrollTo` landing at the bottom (idempotent).
+    ///
+    /// - **Disengage (true → false)**: any time `contentOffset.y`
+    ///   decreases by more than `userScrollUpEpsilon`. Our own
+    ///   `scrollTo(.bottom)` never moves offset backward (only forward,
+    ///   toward larger offsets), so a backward delta is unambiguously
+    ///   a user-initiated scroll up.
+    ///
+    /// - Otherwise: flag unchanged. Content growing below us with no
+    ///   user input keeps `following == true`, and the next fingerprint
+    ///   change will fire `scrollTo` and reseat us at the bottom.
+    @State private var following: Bool = true
 
-    /// Latest scroll geometry, updated by `onScrollGeometryChange`. Used
-    /// inside `onScrollPhaseChange` to decide whether the user's
-    /// just-ended scroll left us at the bottom or somewhere above.
-    @State private var latestDistanceFromBottom: CGFloat = 0
+    /// Last observed `contentOffset.y`. Sentinel value `-1` = no prior
+    /// sample (we won't run the disengage check until we have one to
+    /// compare against).
+    @State private var lastOffsetY: CGFloat = -1
 
     /// Distance (pts) from the bottom of the scroll content within which
-    /// we still consider the user "anchored".
+    /// we consider the user "at the bottom" and re-engage auto-follow.
     private let bottomThreshold: CGFloat = 40
+    /// Minimum backward offset delta to count as a user-initiated scroll
+    /// up. Guards against floating-point jitter and any tiny system
+    /// adjustments. Generous trackpad scrolls easily exceed this.
+    private let userScrollUpEpsilon: CGFloat = 6
 
     /// Stable id for the bottom sentinel; we scroll to this rather than to
     /// the last message because the sentinel is always at the literal
@@ -60,43 +72,45 @@ struct TranscriptView: View {
                 }
                 .padding(.vertical, DesignTokens.panelPadding)
             }
-            // Geometry handler: asymmetric flag updates.
-            //
-            // - false → true (RE-ENGAGE): allowed any time distance hits
-            //   the threshold. During streaming, content only ever grows,
-            //   so distance can only DECREASE if the user actively scrolled
-            //   down. That's exactly what we want to detect to re-engage
-            //   auto-follow without making the user wait for their gesture
-            //   to settle.
-            //
-            // - true → false (DISENGAGE): NEVER from geometry alone, only
-            //   from a settled user scroll (handled in onScrollPhaseChange).
-            //   Otherwise content growth would race ahead of our scrollTo
-            //   and close the gate forever.
-            .onScrollGeometryChange(for: CGFloat.self, of: { geometry in
-                geometry.contentSize.height
-                    - (geometry.contentOffset.y + geometry.containerSize.height)
-            }, action: { _, distance in
-                latestDistanceFromBottom = distance
-                if !isAnchoredToBottom && distance <= bottomThreshold {
-                    isAnchoredToBottom = true
+            // Single geometry-delta state machine for the `following`
+            // flag. See the @State doc-comment above for the full case
+            // table. Summary:
+            //   distance ≤ threshold        → engage (always)
+            //   offset moved backward       → disengage (user scrolled up)
+            //   anything else               → leave flag alone
+            .onScrollGeometryChange(for: ScrollSample.self, of: { geometry in
+                ScrollSample(
+                    offsetY: geometry.contentOffset.y,
+                    contentHeight: geometry.contentSize.height,
+                    containerHeight: geometry.containerSize.height
+                )
+            }, action: { _, current in
+                let distance = current.contentHeight - (current.offsetY + current.containerHeight)
+                if distance <= bottomThreshold {
+                    // At (or past) the bottom for any reason: user scrolled
+                    // down, content shrank to fit, our scrollTo landed, or
+                    // it's the first sample on an empty/short chat. Engage.
+                    following = true
+                } else if lastOffsetY >= 0,
+                          current.offsetY < lastOffsetY - userScrollUpEpsilon {
+                    // Offset moved backward (up the document). Our own
+                    // scrollTo only ever moves offset forward, so this can
+                    // only be user-initiated. The user wants to read older
+                    // content; stop yanking them on every delta.
+                    following = false
                 }
+                // Otherwise: content grew below us (case A in the comment),
+                // our scrollTo caught up (case B), or content shrank without
+                // crossing threshold. In all of these `following` should
+                // be unchanged.
+                lastOffsetY = current.offsetY
             })
-            // Settled-gesture handler: only path that disengages auto-follow.
-            // When a user scroll comes to rest above the threshold, the user
-            // is reading something earlier and we should stop yanking them
-            // back down on every delta.
-            .onScrollPhaseChange { _, newPhase in
-                if newPhase == .idle && latestDistanceFromBottom > bottomThreshold {
-                    isAnchoredToBottom = false
-                }
-            }
             .onChange(of: fingerprint) { _, _ in
-                // Auto-follow on any content change, but only if we're
-                // currently anchored. Defaults to true so the very first
-                // message in a fresh chat scrolls into view even before
-                // any scroll-geometry event has fired.
-                guard isAnchoredToBottom else { return }
+                // Auto-follow on any content change while engaged. Default
+                // value of `following` is true so the very first message in
+                // a fresh chat scrolls into view even before any
+                // scroll-geometry event has had a chance to fire.
+                guard following else { return }
                 proxy.scrollTo(bottomSentinelID, anchor: .bottom)
             }
             .onAppear {
@@ -169,6 +183,14 @@ struct TranscriptView: View {
             }
         }
     }
+}
+
+/// Snapshot of the scroll view geometry. Equatable so
+/// `onScrollGeometryChange` can dedupe; passed as the observed value.
+private struct ScrollSample: Equatable {
+    var offsetY: CGFloat
+    var contentHeight: CGFloat
+    var containerHeight: CGFloat
 }
 
 private struct EmptyChatView: View {
