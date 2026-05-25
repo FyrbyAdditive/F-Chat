@@ -13,15 +13,21 @@ struct MessageView: View {
 
     /// True while the model is mid-turn on *this* message and hasn't started
     /// emitting visible text yet. Drives the pill + reasoning-block expand.
-    private var isActivelyThinking: Bool {
+    /// Computed once at the top of `body` (see the `let` there) and passed
+    /// explicitly into the row sub-views — calling it on every render of
+    /// every visible row was the post-thinking-commit hot path at 70k.
+    /// Iterates `reversed()` because once text streaming starts, the text
+    /// item is always at the tail of `contentItems` — O(1) common case.
+    private func computeIsActivelyThinking() -> Bool {
         guard message.id == streamingMessageID else { return false }
-        return !message.contentItems.contains { item in
-            if case .text(let s) = item, !s.isEmpty { return true }
-            return false
+        for item in message.contentItems.reversed() {
+            if case .text(let s) = item, !s.isEmpty { return false }
         }
+        return true
     }
 
     var body: some View {
+        let isActivelyThinking = computeIsActivelyThinking()
         HStack(alignment: .top, spacing: 12) {
             roleBadge
                 .frame(width: 32, height: 32)
@@ -30,7 +36,7 @@ struct MessageView: View {
                     ThinkingPill()
                 }
                 ForEach(Array(message.contentItems.enumerated()), id: \.offset) { _, item in
-                    contentView(for: item)
+                    contentView(for: item, isActivelyThinking: isActivelyThinking)
                 }
                 if let failureError, let onRetry {
                     FailureRetryBanner(message: failureError, onRetry: onRetry)
@@ -94,7 +100,7 @@ struct MessageView: View {
     }
 
     @ViewBuilder
-    private func contentView(for item: MessageContent) -> some View {
+    private func contentView(for item: MessageContent, isActivelyThinking: Bool) -> some View {
         switch item {
         case .text(let text):
             if message.role == .user {

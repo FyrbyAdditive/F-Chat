@@ -138,10 +138,19 @@ final class AppEnvironment {
             activeProviderID: activeProviderID,
             enabledTools: enabledTools
         )
-        do {
-            try stateStore.save(snapshot)
-        } catch {
-            FileHandle.standardError.write(Data("[FChat] persist failed: \(error)\n".utf8))
+        // Encode + atomic write off MainActor. At 70k+ tokens the encode
+        // alone is hundreds of ms — running it on MainActor blocked the UI
+        // at the end of every streaming reply (one save fires after the
+        // 400ms debounce drains). PersistedAppState is value-typed and
+        // AppStateStore is Sendable, so detaching is safe; the atomic
+        // write is filesystem-atomic so back-to-back saves can't corrupt.
+        let store = stateStore
+        Task.detached(priority: .utility) {
+            do {
+                try store.save(snapshot)
+            } catch {
+                FileHandle.standardError.write(Data("[FChat] persist failed: \(error)\n".utf8))
+            }
         }
     }
 

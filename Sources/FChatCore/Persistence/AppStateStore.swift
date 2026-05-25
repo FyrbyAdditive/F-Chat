@@ -34,7 +34,10 @@ public struct AppStateStore: Sendable {
 
     public func save(_ state: PersistedAppState) throws {
         let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        // .sortedKeys roughly doubles encode cost on a 70k-token state by
+        // sorting every key in the nested tree. Dropped — the file stays
+        // human-readable with .prettyPrinted alone.
+        encoder.outputFormatting = [.prettyPrinted]
         encoder.dateEncodingStrategy = .iso8601
         let data = try encoder.encode(state)
         try data.write(to: fileURL, options: [.atomic])
