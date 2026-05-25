@@ -49,6 +49,9 @@ struct CollectionsView: View {
                 if let id = pendingCollectionDelete {
                     Task {
                         try? await environment.collectionStore.deleteCollection(id)
+                        // Drop any leftover ingest queue rows so they don't
+                        // appear under whatever collection the user opens next.
+                        environment.ingestQueue?.removeAll(forCollection: id)
                         if selectedCollectionID == id { selectedCollectionID = nil }
                         refreshTrigger += 1
                     }
@@ -145,7 +148,7 @@ struct CollectionsView: View {
                     refreshTrigger: $refreshTrigger
                 )
                 .padding()
-                IngestProgressView(environment: environment)
+                IngestProgressView(environment: environment, collectionID: collectionID)
                 Divider()
                 if documents.isEmpty {
                     VStack(spacing: 6) {
@@ -412,11 +415,17 @@ private struct IngestDropTarget: View {
 
 private struct IngestProgressView: View {
     @Bindable var environment: AppEnvironment
+    let collectionID: CollectionID
 
     var body: some View {
-        if let queue = environment.ingestQueue, !queue.entries.isEmpty {
+        // Only show entries for the currently-selected collection. A single
+        // shared IngestQueue serves all collections so progress survives
+        // pane switches, but the per-collection view should never leak
+        // entries from a different (or deleted) collection.
+        let visible = (environment.ingestQueue?.entries ?? []).filter { $0.collectionID == collectionID }
+        if !visible.isEmpty {
             VStack(alignment: .leading, spacing: 4) {
-                ForEach(queue.entries) { entry in
+                ForEach(visible) { entry in
                     HStack(spacing: 6) {
                         statusIcon(for: entry.status)
                         Text(entry.filename)
@@ -433,12 +442,17 @@ private struct IngestProgressView: View {
                 }
                 HStack {
                     Spacer()
-                    if queue.isProcessing {
-                        Button("Cancel", role: .destructive) { queue.cancelAll() }
-                            .controlSize(.small)
+                    let isProcessing = visible.contains { $0.status == .pending || $0.status == .running }
+                    if isProcessing {
+                        Button("Cancel", role: .destructive) {
+                            environment.ingestQueue?.cancel(collectionID: collectionID)
+                        }
+                        .controlSize(.small)
                     } else {
-                        Button("Clear done") { queue.clearCompleted() }
-                            .controlSize(.small)
+                        Button("Clear done") {
+                            environment.ingestQueue?.clearCompleted(collectionID: collectionID)
+                        }
+                        .controlSize(.small)
                     }
                 }
             }

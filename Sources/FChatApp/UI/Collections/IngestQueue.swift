@@ -58,12 +58,51 @@ final class IngestQueue {
         }
     }
 
+    /// Mark every pending/running entry for this collection as cancelled.
+    /// Other collections' entries keep running.
+    func cancel(collectionID: CollectionID) {
+        for i in entries.indices where entries[i].collectionID == collectionID
+            && (entries[i].status == .pending || entries[i].status == .running) {
+            entries[i].status = .failed("cancelled")
+        }
+        // If there's no work left at all anywhere, also kill the worker
+        // so its loop exits and `isProcessing` flips off.
+        if !entries.contains(where: { $0.status == .pending }) {
+            workTask?.cancel()
+            workTask = nil
+            isProcessing = false
+        }
+    }
+
     func clearCompleted() {
         entries.removeAll { entry in
             switch entry.status {
             case .succeeded, .failed: return true
             default: return false
             }
+        }
+    }
+
+    /// Drop completed/failed entries for one collection only.
+    func clearCompleted(collectionID: CollectionID) {
+        entries.removeAll { entry in
+            guard entry.collectionID == collectionID else { return false }
+            switch entry.status {
+            case .succeeded, .failed: return true
+            default: return false
+            }
+        }
+    }
+
+    /// Drop every entry — running, pending, or done — for a collection.
+    /// Called when the collection itself is deleted so the progress view
+    /// doesn't leak stale rows into the next collection the user opens.
+    func removeAll(forCollection collectionID: CollectionID) {
+        entries.removeAll { $0.collectionID == collectionID }
+        if !entries.contains(where: { $0.status == .pending || $0.status == .running }) {
+            workTask?.cancel()
+            workTask = nil
+            isProcessing = false
         }
     }
 
