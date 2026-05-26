@@ -4,10 +4,13 @@ import FChatCore
 struct ChatDetailView: View {
     @Bindable var environment: AppEnvironment
     let conversationID: ConversationID
-    @State private var viewModel: ChatViewModel?
     @State private var showInspector = true
 
     var body: some View {
+        // View models live in the environment so an in-flight stream
+        // survives sidebar navigation. Re-rendering this view simply
+        // re-binds against the existing VM if there is one.
+        let viewModel = environment.viewModel(for: conversationID)
         Group {
             if let viewModel {
                 VStack(spacing: 0) {
@@ -46,18 +49,13 @@ struct ChatDetailView: View {
                 ProgressView()
             }
         }
-        .task(id: conversationID) {
-            if let conversation = environment.conversation(conversationID) {
-                viewModel = ChatViewModel(conversation: conversation, environment: environment)
-            }
-        }
         // Sidebar rename writes directly into environment.conversations[i],
         // which doesn't propagate back into the active view model's copy.
         // When the environment's title for this chat changes externally and
         // diverges from what the view model currently shows, pull it in so
         // the inspector + nav-title stay in sync.
         .onChange(of: environment.conversation(conversationID)?.title) { _, newTitle in
-            guard let newTitle, let vm = viewModel else { return }
+            guard let newTitle, let vm = environment.viewModel(for: conversationID) else { return }
             if vm.conversation.title != newTitle {
                 vm.conversation.title = newTitle
             }

@@ -176,47 +176,51 @@ final class ChatViewModel {
         let llm = environment.makeRuntimeProvider(for: providerRecord)
         let runner = ChatTurnRunner(provider: llm, registry: registry, maxIterations: providerRecord.sampling.maxToolIterations)
 
-        // Publish this chat's attached collections to the environment so
+        // Capture this chat's attached collections as a per-turn TaskLocal so
         // the shared rag_search tool (registered once at startup) can fall
         // back to searching them when the model omits the `collection` arg.
-        environment.attachedCollectionsForActiveChat = Array(conversation.settings.attachedCollections)
+        // TaskLocal scoping means two chats streaming concurrently don't
+        // clobber each other.
+        let attachedCollections = Array(conversation.settings.attachedCollections)
 
         isStreaming = true
         firstDeltaAt = nil
         let enabledTools = environment.enabledTools
         streamTask = Task { [weak self, assistantIndex] in
             guard let self else { return }
-            do {
-                let allDefinitions = await registry.definitions(for: promptLanguage)
-                let toolDefinitions = allDefinitions.filter { enabledTools.contains($0.name) }
+            await ChatTaskContext.$attachedCollections.withValue(attachedCollections) {
+                do {
+                    let allDefinitions = await registry.definitions(for: promptLanguage)
+                    let toolDefinitions = allDefinitions.filter { enabledTools.contains($0.name) }
 
-                let request = try await self.buildRequestWithCompactIfNeeded(
-                    providerRecord: providerRecord,
-                    modelID: trimmedModel,
-                    language: promptLanguage,
-                    toolDefinitions: toolDefinitions,
-                    llm: llm,
-                    budget: budget,
-                    userMessageTokens: userMessageTokens,
-                    userMessageID: userMessageID,
-                    assistantMessageID: assistantMessageID
-                )
-                for try await event in runner.run(initial: request) {
-                    await self.apply(event: event, assistantIndex: assistantIndex)
+                    let request = try await self.buildRequestWithCompactIfNeeded(
+                        providerRecord: providerRecord,
+                        modelID: trimmedModel,
+                        language: promptLanguage,
+                        toolDefinitions: toolDefinitions,
+                        llm: llm,
+                        budget: budget,
+                        userMessageTokens: userMessageTokens,
+                        userMessageID: userMessageID,
+                        assistantMessageID: assistantMessageID
+                    )
+                    for try await event in runner.run(initial: request) {
+                        await self.apply(event: event, assistantIndex: assistantIndex)
+                    }
+                } catch {
+                    let rendered = ChatViewModel.describe(error: error)
+                    FileHandle.standardError.write(Data("[FChat] chat turn failed: \(rendered) — raw: \(error)\n".utf8))
+                    self.lastError = rendered
+                    self.failedUserMessageID = userMessageID
+                    // Drop the empty assistant placeholder we appended; the user
+                    // shouldn't see a blank assistant card next to a failed turn.
+                    self.conversation.messages.removeAll { $0.id == assistantMessageID }
                 }
-            } catch {
-                let rendered = ChatViewModel.describe(error: error)
-                FileHandle.standardError.write(Data("[FChat] chat turn failed: \(rendered) — raw: \(error)\n".utf8))
-                self.lastError = rendered
-                self.failedUserMessageID = userMessageID
-                // Drop the empty assistant placeholder we appended; the user
-                // shouldn't see a blank assistant card next to a failed turn.
-                self.conversation.messages.removeAll { $0.id == assistantMessageID }
+                self.isStreaming = false
+                self.environment?.update(self.conversation)
+                self.refreshProjectionNow()
+                self.maybeAutoTitle(providerRecord: providerRecord, modelID: trimmedModel, language: promptLanguage)
             }
-            self.isStreaming = false
-            self.environment?.update(self.conversation)
-            self.refreshProjectionNow()
-            self.maybeAutoTitle(providerRecord: providerRecord, modelID: trimmedModel, language: promptLanguage)
         }
     }
 

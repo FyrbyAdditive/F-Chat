@@ -15,10 +15,14 @@ final class AppEnvironment {
     let secretStore: any SecretStore
     let toolRegistry: ToolRegistry
     let collectionStore: any CollectionStoreProtocol
-    /// Set by `ChatViewModel.send` immediately before kicking off a stream
-    /// so the rag_search tool can default to "all attached collections for
-    /// the active chat" when the model omits the `collection` argument.
-    var attachedCollectionsForActiveChat: [CollectionID] = []
+    /// Per-conversation view models, cached by id. Created lazily on first
+    /// visit and kept for the rest of the session so an in-flight reply
+    /// survives a sidebar navigation — Stop is the only thing that cancels.
+    /// Concurrent streams on different chats are isolated via
+    /// `ChatTaskContext` (a `@TaskLocal` for the per-turn attached RAG
+    /// collections, set by ChatViewModel.send for the lifetime of the
+    /// stream task).
+    var chatViewModels: [ConversationID: ChatViewModel] = [:]
     /// Lazy-built ingest queue shared across the Collections UI so per-file
     /// progress survives pane switches.
     var ingestQueue: IngestQueue?
@@ -249,10 +253,11 @@ final class AppEnvironment {
         let webFetch = WebFetchTool(extractor: pageExtractor, cache: webFetchCache)
         let rag = RAGSearchTool(retriever: DynamicAttachedRAGRetriever(
             store: collectionStore,
-            attachedAccessor: { [weak self] in
-                guard let self else { return [] }
-                return self.attachedCollectionsForActiveChat
-            }
+            // TaskLocal scoped per stream turn — set by ChatViewModel.send
+            // and propagated into every tool-call subtask the runner spawns.
+            // Lets two chats stream concurrently without their rag_search
+            // calls clobbering each other's attached collections.
+            attachedAccessor: { ChatTaskContext.attachedCollections }
         ))
         // current_time is opt-in (not in defaultEnabledTools) so the system
         // prompt prefix stays cache-friendly for users who don't need
@@ -305,6 +310,20 @@ final class AppEnvironment {
         conversations.first(where: { $0.id == id })
     }
 
+    /// Returns the live `ChatViewModel` for the conversation, creating and
+    /// caching one on first access. View models survive sidebar navigation
+    /// — switching chats does NOT tear them down — so an in-flight stream
+    /// continues running while the user looks at something else. Only an
+    /// explicit cancel (Stop button) or deletion ends a stream. Returns
+    /// nil if the conversation has been deleted.
+    func viewModel(for id: ConversationID) -> ChatViewModel? {
+        if let existing = chatViewModels[id] { return existing }
+        guard let conversation = self.conversation(id) else { return nil }
+        let vm = ChatViewModel(conversation: conversation, environment: self)
+        chatViewModels[id] = vm
+        return vm
+    }
+
     func update(_ conversation: Conversation) {
         if let i = conversations.firstIndex(where: { $0.id == conversation.id }) {
             conversations[i] = conversation
@@ -312,6 +331,10 @@ final class AppEnvironment {
     }
 
     func deleteConversation(_ id: ConversationID) {
+        // Cancel any in-flight stream for this chat and free its cached
+        // view model before dropping the underlying conversation.
+        chatViewModels[id]?.cancel()
+        chatViewModels.removeValue(forKey: id)
         let wasSelected = (selectedConversationID == id)
         conversations.removeAll { $0.id == id }
         if wasSelected {
@@ -327,6 +350,8 @@ final class AppEnvironment {
     }
 
     func deleteAllConversations() {
+        for (_, vm) in chatViewModels { vm.cancel() }
+        chatViewModels.removeAll()
         conversations.removeAll()
         selectedConversationID = nil
         sidebarSelection = nil

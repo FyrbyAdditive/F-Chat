@@ -86,25 +86,36 @@ struct SidebarView: View {
     private func conversationRow(_ conversation: Conversation) -> some View {
         NavigationLink(value: SidebarSelection.conversation(conversation.id)) {
             VStack(alignment: .leading, spacing: 2) {
-                if renamingID == conversation.id {
-                    TextField("Chat name", text: $renameDraft)
-                        .textFieldStyle(.plain)
-                        .font(.body)
-                        .focused($renameFieldFocus, equals: conversation.id)
-                        .onSubmit { commitRename() }
-                        .onExitCommand { cancelRename() }
-                        .onChange(of: renameFieldFocus) { _, newFocus in
-                            // Focus moved away from this field — commit
-                            // whatever was typed. Guard against the
-                            // commit-then-clear feedback loop.
-                            if newFocus != conversation.id && renamingID == conversation.id {
-                                commitRename()
+                HStack(spacing: 6) {
+                    if renamingID == conversation.id {
+                        TextField("Chat name", text: $renameDraft)
+                            .textFieldStyle(.plain)
+                            .font(.body)
+                            .focused($renameFieldFocus, equals: conversation.id)
+                            .onSubmit { commitRename() }
+                            .onExitCommand { cancelRename() }
+                            .onChange(of: renameFieldFocus) { _, newFocus in
+                                // Focus moved away from this field — commit
+                                // whatever was typed. Guard against the
+                                // commit-then-clear feedback loop.
+                                if newFocus != conversation.id && renamingID == conversation.id {
+                                    commitRename()
+                                }
                             }
-                        }
-                } else {
-                    Text(conversation.title)
-                        .lineLimit(1)
-                        .font(.body)
+                    } else {
+                        Text(conversation.title)
+                            .lineLimit(1)
+                            .font(.body)
+                    }
+                    Spacer(minLength: 0)
+                    // Tiny indicator when a background stream is still
+                    // running for this chat. Only chats the user has
+                    // visited this session have a cached view model;
+                    // never-visited chats never have an in-flight stream.
+                    if environment.chatViewModels[conversation.id]?.isStreaming == true {
+                        ProgressView()
+                            .controlSize(.mini)
+                    }
                 }
                 Text(conversation.updatedAt.formatted(date: .abbreviated, time: .shortened))
                     .font(.caption2)
