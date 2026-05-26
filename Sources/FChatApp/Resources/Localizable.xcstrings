@@ -70,6 +70,23 @@
         }
       }
     },
+    "API key": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API key"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API-nyckel"
+          }
+        }
+      }
+    },
     "About": {
       "extractionState": "manual",
       "localizations": {
@@ -219,6 +236,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Väntar på resultat…"
+          }
+        }
+      }
+    },
+    "Base URL": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Base URL"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bas-URL"
           }
         }
       }
@@ -597,6 +631,23 @@
         }
       }
     },
+    "Default model": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Default model"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Standardmodell"
+          }
+        }
+      }
+    },
     "Delete": {
       "extractionState": "manual",
       "localizations": {
@@ -729,6 +780,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Släpp filer eller mappar här"
+          }
+        }
+      }
+    },
+    "Enter a full URL including scheme.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter a full URL including scheme."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ange en fullständig URL inklusive schema."
           }
         }
       }
@@ -1345,6 +1413,23 @@
         }
       }
     },
+    "Paste key — stored in Keychain": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paste key — stored in Keychain"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klistra in nyckel — lagras i nyckelringen"
+          }
+        }
+      }
+    },
     "Pick a model in the inspector, then type below.": {
       "extractionState": "manual",
       "localizations": {
@@ -1600,6 +1685,23 @@
         }
       }
     },
+    "Save failed: %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save failed: %@"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Det gick inte att spara: %@"
+          }
+        }
+      }
+    },
     "Save key to Keychain": {
       "extractionState": "manual",
       "localizations": {
@@ -1613,6 +1715,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Spara nyckel i Nyckelring"
+          }
+        }
+      }
+    },
+    "Saved to Keychain.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saved to Keychain."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sparad i nyckelringen."
           }
         }
       }
@@ -2042,6 +2161,23 @@
         }
       }
     },
+    "budget": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "budget"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "budget"
+          }
+        }
+      }
+    },
     "p.%lld": {
       "extractionState": "manual",
       "localizations": {
@@ -2055,6 +2191,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "s.%lld"
+          }
+        }
+      }
+    },
+    "server default": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "server default"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "serverstandard"
           }
         }
       }
@@ -2076,6 +2229,23 @@
         }
       }
     },
+    "top_p": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "top_p"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "top_p"
+          }
+        }
+      }
+    },
     "— pick a default —": {
       "extractionState": "manual",
       "localizations": {
@@ -2089,6 +2259,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "— välj en standard —"
+          }
+        }
+      }
+    },
+    "•••••••• (saved in Keychain)": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "•••••••• (saved in Keychain)"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "•••••••• (sparad i nyckelringen)"
           }
         }
       }

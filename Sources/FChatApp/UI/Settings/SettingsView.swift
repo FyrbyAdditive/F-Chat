@@ -132,8 +132,13 @@ private struct ProviderCard: View {
 
                 LabeledRow(label: "API key") {
                     HStack {
-                        SecureField(apiKeyAlreadySaved ? "•••••••• (saved in Keychain)" : "Paste key — stored in Keychain",
-                                    text: $apiKeyDraft)
+                        // Pre-compute the placeholder as a LocalizedStringKey
+                        // so the ternary doesn't collapse to a verbatim
+                        // `String` and bypass localization.
+                        let apiKeyPlaceholder: LocalizedStringKey = apiKeyAlreadySaved
+                            ? "•••••••• (saved in Keychain)"
+                            : "Paste key — stored in Keychain"
+                        SecureField(apiKeyPlaceholder, text: $apiKeyDraft)
                             .textFieldStyle(.roundedBorder)
                         Button("Save") {
                             saveAPIKey()
@@ -242,9 +247,11 @@ private struct ProviderCard: View {
                 try await store.setSecret(key, for: KeychainAccount.providerAPIKey(id))
                 apiKeyDraft = ""
                 apiKeyAlreadySaved = true
-                saveMessage = "Saved to Keychain."
+                saveMessage = String(localized: "Saved to Keychain.")
             } catch {
-                saveMessage = "Save failed: \(error.localizedDescription)"
+                saveMessage = String(
+                    localized: "Save failed: \(error.localizedDescription)"
+                )
             }
         }
     }
@@ -262,7 +269,7 @@ private struct ProviderCard: View {
 }
 
 private struct LabeledRow<Content: View>: View {
-    let label: String
+    let label: LocalizedStringKey
     @ViewBuilder var content: () -> Content
     var body: some View {
         HStack(alignment: .firstTextBaseline) {
@@ -330,7 +337,7 @@ private struct AddProviderSheet: View {
                     .keyboardShortcut(.cancelAction)
                 Button("Add") {
                     guard let parsed = URL(string: url), parsed.scheme != nil else {
-                        error = "Enter a full URL including scheme."
+                        error = String(localized: "Enter a full URL including scheme.")
                         return
                     }
                     _ = environment.addProvider(displayName: name, baseURL: parsed)
@@ -454,7 +461,7 @@ private struct SamplingSection: View {
 
             OptionalNumericRow(
                 label: "Temperature",
-                placeholder: "default",
+                placeholder: "server default",
                 value: Binding(get: { sampling.temperature }, set: { sampling.temperature = $0 }),
                 range: 0.0...2.0,
                 step: 0.05,
@@ -462,7 +469,7 @@ private struct SamplingSection: View {
             )
             OptionalNumericRow(
                 label: "top_p",
-                placeholder: "default",
+                placeholder: "server default",
                 value: Binding(get: { sampling.topP }, set: { sampling.topP = $0 }),
                 range: 0.0...1.0,
                 step: 0.01,
@@ -578,8 +585,8 @@ private struct ContextSection: View {
 }
 
 private struct OptionalNumericRow: View {
-    let label: String
-    let placeholder: String
+    let label: LocalizedStringKey
+    let placeholder: LocalizedStringKey
     @Binding var value: Double?
     let range: ClosedRange<Double>
     let step: Double
@@ -625,8 +632,8 @@ private struct OptionalNumericRow: View {
 }
 
 private struct OptionalIntRow: View {
-    let label: String
-    let placeholder: String
+    let label: LocalizedStringKey
+    let placeholder: LocalizedStringKey
     @Binding var value: Int?
     let defaultValue: Int
 
