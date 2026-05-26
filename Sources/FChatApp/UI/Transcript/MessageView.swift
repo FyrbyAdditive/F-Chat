@@ -278,15 +278,11 @@ struct ToolCallResultBlock: View {
         case "web_fetch":
             return (obj["url"] as? String) ?? ""
         case "make_chart":
-            // Charts don't want JSON next to the tool name. Prefer the
-            // user-supplied title; fall back to "<type> chart".
-            if let title = obj["title"] as? String, !title.isEmpty {
-                return title
-            }
-            if let type = obj["type"] as? String, !type.isEmpty {
-                return "\(type) chart"
-            }
-            return ""
+            // Just the chart type — using the user-supplied title here
+            // duplicates what's already rendered inside the chart itself.
+            // "make_chart  bar" / "line" / "pie" is enough context for
+            // the collapsed row.
+            return (obj["type"] as? String) ?? ""
         default:
             let trimmed = call.argumentsJSON.trimmingCharacters(in: .whitespacesAndNewlines)
             if trimmed == "{}" || trimmed.isEmpty { return "" }
