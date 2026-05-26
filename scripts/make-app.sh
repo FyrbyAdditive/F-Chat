@@ -47,6 +47,14 @@ mkdir -p "$APP_DIR/Contents/Resources"
 
 cp "$EXEC" "$APP_DIR/Contents/MacOS/FChat"
 
+# The app icon lives in the FChatApp resource sources but macOS expects it
+# at the top of Contents/Resources/. Copy it there explicitly so Dock /
+# Finder / Spotlight can find it via the CFBundleIconFile lookup below.
+ICON_SRC="$ROOT/Sources/FChatApp/Resources/AppIcon.icns"
+if [[ -f "$ICON_SRC" ]]; then
+    cp "$ICON_SRC" "$APP_DIR/Contents/Resources/AppIcon.icns"
+fi
+
 # Copy every SPM resource bundle xcodebuild produced into Resources/. This
 # includes our own per-module bundles (F-Chat_FChatRAG.bundle with the
 # Qwen3 model, F-Chat_FChatCore.bundle with the tokenizer files, etc.)
@@ -69,6 +77,8 @@ cat >"$APP_DIR/Contents/Info.plist" <<'PLIST'
     <string>F-Chat</string>
     <key>CFBundleExecutable</key>
     <string>FChat</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
     <key>CFBundleIdentifier</key>
     <string>app.fyrby.fchat</string>
     <key>CFBundleInfoDictionaryVersion</key>
