@@ -1,5 +1,6 @@
 import Foundation
 import FChatCore
+import FChatWeb
 
 public struct FileIngestor: Sendable {
     public let parsers: [any DocumentParser]
@@ -8,17 +9,42 @@ public struct FileIngestor: Sendable {
         self.parsers = parsers
     }
 
-    public static var defaultParsers: [any DocumentParser] {
-        [PlainTextParser(), MarkdownParser(), CodeParser(), PDFParser(), DocxParser(), PptxParser()]
+    /// Construct an ingestor with the default parser set, sharing the given
+    /// `PageExtractor` with the HTML parser (re-uses the WKWebView pool the
+    /// `web_fetch` tool already owns).
+    public init(pageExtractor: any PageExtractor) {
+        self.parsers = FileIngestor.defaultParsers(pageExtractor: pageExtractor)
     }
 
-    public func parse(data: Data, filename: String) throws -> ParsedDocument {
+    public static var defaultParsers: [any DocumentParser] {
+        // No-extractor fallback: HTMLParser will throw at parse-time if used.
+        defaultParsers(pageExtractor: nil)
+    }
+
+    public static func defaultParsers(pageExtractor: (any PageExtractor)?) -> [any DocumentParser] {
+        var list: [any DocumentParser] = [
+            PlainTextParser(),
+            MarkdownParser(),
+            JupyterParser(),
+            RTFParser(),
+            CodeParser(),
+            PDFParser(),
+            DocxParser(),
+            PptxParser(),
+        ]
+        if let pageExtractor {
+            list.append(HTMLParser(extractor: pageExtractor))
+        }
+        return list
+    }
+
+    public func parse(data: Data, filename: String) async throws -> ParsedDocument {
         let ext = (filename as NSString).pathExtension.lowercased()
         if let parser = parsers.first(where: { $0.supportedExtensions.contains(ext) }) {
-            return try parser.parse(data: data, filename: filename)
+            return try await parser.parse(data: data, filename: filename)
         }
         // Fallback: try treating as plain text.
-        return try PlainTextParser().parse(data: data, filename: filename)
+        return try await PlainTextParser().parse(data: data, filename: filename)
     }
 
     /// Union of every extension every registered parser recognises. Used by

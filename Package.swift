@@ -25,6 +25,7 @@ let package = Package(
         // for the tokenizer loader macros (#huggingFaceTokenizerLoader).
         .package(url: "https://github.com/ml-explore/mlx-swift-lm", from: "3.31.3"),
         .package(url: "https://github.com/huggingface/swift-transformers", from: "1.3.0"),
+        .package(url: "https://github.com/weichsel/ZIPFoundation", from: "0.9.0"),
     ],
     targets: [
         // Vendored sqlite-vec v0.1.9 amalgamation. Built with SQLITE_CORE so
@@ -83,6 +84,7 @@ let package = Package(
                 "FChatCore",
                 "FChatProviders",
                 "FChatTools",
+                "FChatWeb",
                 "CSQLiteVec",
                 .product(name: "GRDB", package: "GRDB.swift"),
                 .product(name: "MLXEmbedders", package: "mlx-swift-lm"),
@@ -91,6 +93,8 @@ let package = Package(
                 // at the call site, so this module must be on the FChatRAG
                 // dep list even though we never name it directly in code.
                 .product(name: "Tokenizers", package: "swift-transformers"),
+                // ZIP reader for DOCX/PPTX (Office Open XML are ZIP archives).
+                .product(name: "ZIPFoundation", package: "ZIPFoundation"),
             ],
             // Bundle the Qwen3-Embedding-4B-4bit-DWQ model weights so the
             // app is self-contained — no first-run Hugging Face download.
@@ -141,6 +145,7 @@ let package = Package(
             dependencies: [
                 "FChatRAG",
                 .product(name: "GRDB", package: "GRDB.swift"),
+                .product(name: "ZIPFoundation", package: "ZIPFoundation"),
             ],
             resources: [.process("Fixtures")]
         ),

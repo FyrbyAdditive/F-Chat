@@ -95,8 +95,9 @@ final class AppEnvironment {
             resolvedStore = CollectionStore()
         }
         self.collectionStore = resolvedStore
-        self.ingestor = FileIngestor()
-        self.pageExtractor = WebKitPageExtractor()
+        let pageExtractor = WebKitPageExtractor()
+        self.pageExtractor = pageExtractor
+        self.ingestor = FileIngestor(pageExtractor: pageExtractor)
         self.webFetchCache = WebFetchCache()
         self.searchProvider = DuckDuckGoProvider()
         self.stateStore = AppStateStore()

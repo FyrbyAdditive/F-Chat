@@ -26,7 +26,7 @@ public struct ParsedSection: Sendable, Hashable {
 
 public protocol DocumentParser: Sendable {
     var supportedExtensions: [String] { get }
-    func parse(data: Data, filename: String) throws -> ParsedDocument
+    func parse(data: Data, filename: String) async throws -> ParsedDocument
 }
 
 public enum DocumentParserError: Error, Sendable, Equatable {

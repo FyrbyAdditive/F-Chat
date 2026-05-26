@@ -365,6 +365,9 @@ private struct DocumentRow: View {
         case .pptx: return "rectangle.on.rectangle"
         case .code: return "chevron.left.forwardslash.chevron.right"
         case .text: return "doc.plaintext"
+        case .html: return "globe"
+        case .jupyter: return "book.closed"
+        case .rtf: return "doc.text"
         }
     }
 }
@@ -516,7 +519,7 @@ private struct IngestDropTarget: View {
 
     private func ingestQueue() -> IngestQueue {
         if let existing = environment.ingestQueue { return existing }
-        let q = IngestQueue(store: environment.collectionStore)
+        let q = IngestQueue(store: environment.collectionStore, ingestor: environment.ingestor)
         environment.ingestQueue = q
         return q
     }

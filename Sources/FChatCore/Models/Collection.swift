@@ -81,7 +81,7 @@ public struct RAGDocument: Identifiable, Sendable, Hashable, Codable {
 }
 
 public enum DocumentKind: String, Sendable, Hashable, Codable, CaseIterable {
-    case pdf, text, markdown, docx, pptx, code
+    case pdf, text, markdown, docx, pptx, code, html, jupyter, rtf
 }
 
 public struct RAGChunk: Identifiable, Sendable, Hashable, Codable {

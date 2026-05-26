@@ -175,7 +175,7 @@ public actor PersistentCollectionStore: CollectionStoreProtocol {
         var parseError: String?
         var parsed: ParsedDocument?
         do {
-            parsed = try ingestor.parse(data: data, filename: filename)
+            parsed = try await ingestor.parse(data: data, filename: filename)
         } catch let err as DocumentParserError {
             parseError = String(describing: err)
         } catch {

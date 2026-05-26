@@ -8,7 +8,7 @@ public struct PDFParser: DocumentParser {
     public let supportedExtensions = ["pdf"]
     public init() {}
 
-    public func parse(data: Data, filename: String) throws -> ParsedDocument {
+    public func parse(data: Data, filename: String) async throws -> ParsedDocument {
         guard let pdf = PDFDocument(data: data) else {
             throw DocumentParserError.decodeFailure("could not open PDF \(filename)")
         }
@@ -28,7 +28,7 @@ public struct PDFParser: DocumentParser {
 public struct PDFParser: DocumentParser {
     public let supportedExtensions = ["pdf"]
     public init() {}
-    public func parse(data: Data, filename: String) throws -> ParsedDocument {
+    public func parse(data: Data, filename: String) async throws -> ParsedDocument {
         throw DocumentParserError.parserNotImplemented("PDFKit not available on this platform")
     }
 }

@@ -56,7 +56,7 @@ public actor CollectionStore: CollectionStoreProtocol {
             throw IngestError.unknownCollection
         }
 
-        let parsed = try ingestor.parse(data: data, filename: filename)
+        let parsed = try await ingestor.parse(data: data, filename: filename)
         let hash = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
         let document = RAGDocument(
             collectionID: collectionID,
