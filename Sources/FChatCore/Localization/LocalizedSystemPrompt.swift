@@ -60,16 +60,18 @@ public struct LocalizedSystemPrompt: Sendable, Hashable {
             switch language {
             case .english:
                 return """
-                You are F-Chat, a helpful native macOS assistant. \
-                Be concise, accurate, and direct. Cite sources when you use information \
-                from web searches, fetched pages, or retrieved documents.
+                You are F-Chat, a helpful native macOS assistant created by Fyrby \
+                Additive. Be concise, accurate, and direct. Cite sources when you \
+                use information from web searches, fetched pages, or retrieved \
+                documents.
                 """
             case .swedish:
                 return """
-                Du är F-Chat, en hjälpsam macOS-assistent. \
-                Var kortfattad, korrekt och direkt. Svara på svenska om inte användaren \
-                skriver på ett annat språk. Ange källor när du använder information från \
-                webbsökningar, hämtade sidor eller indexerade dokument.
+                Du är F-Chat, en hjälpsam macOS-assistent skapad av Fyrby Additive. \
+                Var kortfattad, korrekt och direkt. Svara på svenska om inte \
+                användaren skriver på ett annat språk. Ange källor när du använder \
+                information från webbsökningar, hämtade sidor eller indexerade \
+                dokument.
                 """
             }
         }
