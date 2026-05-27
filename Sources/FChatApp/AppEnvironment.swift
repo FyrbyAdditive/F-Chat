@@ -306,10 +306,21 @@ final class AppEnvironment {
     // MARK: - Agents
 
     /// Guarantees the built-in Default agent is present in the list, at
-    /// the front. The Default's `basePrompt` is always nil so the chat
-    /// gets today's localised F-Chat preamble.
+    /// the front. If the persisted list already has a Default entry it's
+    /// preserved as-is — including any user edits to `basePrompt` (which
+    /// the Settings → Agents UI allows). Only when Default is missing
+    /// entirely do we seed a fresh one with nil basePrompt (resolves to
+    /// the localised built-in preamble at compose time).
     static func ensureDefaultAgent(in existing: [Agent]) -> [Agent] {
-        var list = existing.filter { $0.id != .defaultAgent }
+        if let i = existing.firstIndex(where: { $0.id == .defaultAgent }) {
+            if i == 0 { return existing }
+            // Move to front without losing user state.
+            var list = existing
+            let entry = list.remove(at: i)
+            list.insert(entry, at: 0)
+            return list
+        }
+        var list = existing
         let seeded = Agent(
             id: .defaultAgent,
             name: String(localized: "Default", bundle: .module),
@@ -346,10 +357,19 @@ final class AppEnvironment {
         return agent
     }
 
+    /// Updates an agent in place. The Default agent is editable too — the
+    /// user can override its preamble or revert to the localised built-in
+    /// by setting `basePrompt = nil`. Default's name cannot be changed
+    /// (the UI doesn't expose a name field for it).
     func updateAgent(_ updated: Agent) {
-        guard updated.id != .defaultAgent else { return }
         guard let i = agents.firstIndex(where: { $0.id == updated.id }) else { return }
         var copy = updated
+        // Default's display name stays whatever the seed put there;
+        // ignore any name change attempts so a future rename UI added
+        // here can't accidentally make the Default unrecognisable.
+        if updated.id == .defaultAgent {
+            copy.name = agents[i].name
+        }
         copy.updatedAt = .now
         agents[i] = copy
     }

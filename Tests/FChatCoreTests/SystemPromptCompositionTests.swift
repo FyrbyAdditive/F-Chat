@@ -94,6 +94,24 @@ struct SystemPromptCompositionTests {
         #expect(renderedWithEmpty == renderedWithNil)
     }
 
+    /// The built-in preamble accessor must return exactly the same text
+    /// the renderer falls back to. AgentsTab seeds its TextEditor from
+    /// this value when the Default agent hasn't been overridden — if
+    /// these two ever drift, the user would see a different prompt in
+    /// the editor than the one actually being sent to the model.
+    @Test func builtInPreambleMatchesRenderedDefault() {
+        for language in [PromptLanguage.english, .swedish] {
+            let preamble = LocalizedSystemPrompt.builtInPreamble(for: language)
+            let renderedDefault = LocalizedSystemPrompt(
+                language: language,
+                includeToolGuidance: false,
+                includeRAGGuidance: false,
+                basePromptOverride: nil
+            ).render()
+            #expect(preamble == renderedDefault)
+        }
+    }
+
     @Test func customSuffixStillAppendsAfterCustomBase() {
         let rendered = LocalizedSystemPrompt(
             language: .english,

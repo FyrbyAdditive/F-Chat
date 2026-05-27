@@ -47,6 +47,14 @@ public struct LocalizedSystemPrompt: Sendable, Hashable {
         return parts.joined(separator: "\n\n")
     }
 
+    /// The built-in F-Chat preamble for a given language, without any
+    /// tool / RAG guidance or custom suffix. Used by Settings → Agents to
+    /// show the user what the Default agent's prompt actually says (and
+    /// to pre-populate the editor when overriding it).
+    public static func builtInPreamble(for language: PromptLanguage) -> String {
+        Strings.base(for: language)
+    }
+
     private enum Strings {
         static func base(for language: PromptLanguage) -> String {
             switch language {

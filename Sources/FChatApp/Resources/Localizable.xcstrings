@@ -342,6 +342,23 @@
         }
       }
     },
+    "Built-in agent — cannot be deleted or renamed.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Built-in agent — cannot be deleted or renamed."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inbyggd agent — kan inte raderas eller döpas om."
+          }
+        }
+      }
+    },
     "Built-in tools": {
       "extractionState": "manual",
       "localizations": {
@@ -1770,6 +1787,23 @@
         }
       }
     },
+    "Restore F-Chat's localised default preamble.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restore F-Chat's localised default preamble."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Återställ F-Chats lokaliserade standardinledning."
+          }
+        }
+      }
+    },
     "Retry": {
       "extractionState": "manual",
       "localizations": {
@@ -1783,6 +1817,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Försök igen"
+          }
+        }
+      }
+    },
+    "Revert to built-in": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Revert to built-in"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Återställ till inbyggd"
           }
         }
       }
@@ -2004,6 +2055,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Inställningar"
+          }
+        }
+      }
+    },
+    "Showing F-Chat's built-in preamble. Edit to override.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Showing F-Chat's built-in preamble. Edit to override."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Visar F-Chats inbyggda inledning. Redigera för att åsidosätta."
           }
         }
       }

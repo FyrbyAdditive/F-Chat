@@ -116,17 +116,41 @@ private struct AgentCard: View {
 
     private var isDefault: Bool { agent.id == .defaultAgent }
 
+    /// The localised built-in preamble, used as a read-only seed value
+    /// when the Default agent hasn't been overridden, and as the target
+    /// of "Revert to built-in".
+    private var builtInPreamble: String {
+        LocalizedSystemPrompt.builtInPreamble(for: environment.promptLanguage)
+    }
+
+    /// True when the Default agent is currently using the built-in
+    /// preamble (i.e. `basePrompt == nil`). Used to disable Revert and
+    /// to display the editor with the built-in text greyed in.
+    private var isUsingBuiltIn: Bool {
+        isDefault && (agent.basePrompt ?? "").isEmpty
+    }
+
     var body: some View {
         GroupBox(agent.name) {
             VStack(alignment: .leading, spacing: 10) {
-                if isDefault {
-                    Text("Built-in. Uses F-Chat's localised default preamble.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                } else {
-                    HStack {
-                        Spacer()
+                // Header row: delete (custom only) or Revert (Default only).
+                HStack {
+                    if isDefault {
+                        Text("Built-in agent — cannot be deleted or renamed.")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    if isDefault {
+                        Button {
+                            agent.basePrompt = nil
+                        } label: {
+                            Label("Revert to built-in", systemImage: "arrow.uturn.backward")
+                        }
+                        .buttonStyle(.borderless)
+                        .disabled(isUsingBuiltIn)
+                        .help("Restore F-Chat's localised default preamble.")
+                    } else {
                         Button(role: .destructive) {
                             onDelete()
                         } label: {
@@ -135,30 +159,52 @@ private struct AgentCard: View {
                         .buttonStyle(.borderless)
                         .help("Delete agent")
                     }
+                }
 
+                if !isDefault {
                     LabeledContent("Name") {
                         TextField("Agent name", text: $agent.name)
                             .textFieldStyle(.roundedBorder)
                     }
+                }
 
-                    VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
                         Text("System prompt")
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                        TextEditor(text: Binding(
-                            get: { agent.basePrompt ?? "" },
-                            set: {
-                                let trimmed = $0
-                                agent.basePrompt = trimmed.isEmpty ? nil : trimmed
-                            }
-                        ))
-                        .font(.body.monospaced())
-                        .frame(minHeight: 140)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 4)
-                                .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
-                        )
+                        Spacer()
+                        if isUsingBuiltIn {
+                            Text("Showing F-Chat's built-in preamble. Edit to override.")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
                     }
+                    TextEditor(text: Binding(
+                        get: { agent.basePrompt ?? builtInPreamble },
+                        set: { newValue in
+                            let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+                            if isDefault {
+                                // Equality to the built-in means "no
+                                // override" — store nil so future locale
+                                // changes still re-localise correctly.
+                                if trimmed == builtInPreamble.trimmingCharacters(in: .whitespacesAndNewlines) {
+                                    agent.basePrompt = nil
+                                } else {
+                                    agent.basePrompt = newValue.isEmpty ? nil : newValue
+                                }
+                            } else {
+                                agent.basePrompt = newValue.isEmpty ? nil : newValue
+                            }
+                        }
+                    ))
+                    .font(.body.monospaced())
+                    .frame(minHeight: 140)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 4)
+                            .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+                    )
+                    .foregroundStyle(isUsingBuiltIn ? .secondary : .primary)
                 }
             }
             .padding(.vertical, 6)
