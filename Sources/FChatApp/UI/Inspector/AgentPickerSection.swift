@@ -25,21 +25,6 @@ struct AgentPickerSection: View {
             .labelsHidden()
             .pickerStyle(.menu)
 
-            // Tiny preview of the currently-selected agent's prompt.
-            let resolved = environment.resolveAgent(for: viewModel.conversation)
-            if let preview = resolved.basePrompt, !preview.isEmpty {
-                Text(preview)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(3)
-                    .truncationMode(.tail)
-                    .fixedSize(horizontal: false, vertical: true)
-            } else {
-                Text("Uses F-Chat's built-in preamble.")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-
             Text("Set the default for new chats in Settings → Agents.")
                 .font(.caption2)
                 .foregroundStyle(.secondary)

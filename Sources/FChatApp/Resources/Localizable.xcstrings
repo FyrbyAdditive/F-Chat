@@ -2348,23 +2348,6 @@
         }
       }
     },
-    "Uses F-Chat's built-in preamble.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Uses F-Chat's built-in preamble."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Använder F-Chats inbyggda inledning."
-          }
-        }
-      }
-    },
     "Using server max: %@ tokens.": {
       "extractionState": "manual",
       "localizations": {
