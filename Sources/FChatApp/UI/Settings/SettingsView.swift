@@ -17,8 +17,6 @@ struct SettingsView: View {
                 .tabItem { Label("Tools", systemImage: "wrench.and.screwdriver") }
             MCPTab()
                 .tabItem { Label("MCP", systemImage: "network") }
-            CollectionsTab(environment: environment)
-                .tabItem { Label("Collections", systemImage: "books.vertical") }
             AboutTab()
                 .tabItem { Label("About", systemImage: "info.circle") }
         }
@@ -433,19 +431,6 @@ private struct MCPTab: View {
         Form {
             Section("MCP servers") {
                 Text("Add stdio MCP servers here. HTTP transport coming in a follow-up.")
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .formStyle(.grouped)
-    }
-}
-
-private struct CollectionsTab: View {
-    @Bindable var environment: AppEnvironment
-    var body: some View {
-        Form {
-            Section("Document collections") {
-                Text("Drag files into a collection from the Collections sidebar entry.")
                     .foregroundStyle(.secondary)
             }
         }

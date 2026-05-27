@@ -869,23 +869,6 @@
         }
       }
     },
-    "Document collections": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Document collections"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dokumentsamlingar"
-          }
-        }
-      }
-    },
     "Documents are embedded on-device with Qwen3-Embedding-4B running on Apple Silicon (MLX). The model is bundled with the app — no network access required.": {
       "extractionState": "manual",
       "localizations": {
@@ -899,23 +882,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Dokument bäddas in lokalt på enheten med Qwen3-Embedding-4B som körs på Apple Silicon (MLX). Modellen är paketerad med appen — ingen nätverksåtkomst krävs."
-          }
-        }
-      }
-    },
-    "Drag files into a collection from the Collections sidebar entry.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Drag files into a collection from the Collections sidebar entry."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dra filer till en samling från Samlingar-posten i sidofältet."
           }
         }
       }
