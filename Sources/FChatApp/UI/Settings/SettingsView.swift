@@ -1,5 +1,8 @@
 import SwiftUI
 import FChatCore
+#if canImport(AppKit)
+import AppKit
+#endif
 
 struct SettingsView: View {
     @Bindable var environment: AppEnvironment
@@ -677,9 +680,15 @@ private struct OptionalIntRow: View {
 
 private struct AboutTab: View {
     var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: "sparkles")
-                .font(.system(size: 36))
+        VStack(spacing: 12) {
+            logoImage
+                .resizable()
+                .interpolation(.high)
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 128, height: 128)
+                // macOS app icons use a squircle (continuous corner) at
+                // ~22% of the icon edge. 128 * 0.22 ≈ 28pt.
+                .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
             Text("F-Chat").font(.title.bold())
             Text("Version \(FChat.version)")
                 .foregroundStyle(.secondary)
@@ -687,5 +696,19 @@ private struct AboutTab: View {
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    /// Load the logo from the FChatApp SPM resource bundle as an NSImage.
+    /// `Image(name:bundle:)` with a loose PNG path is unreliable in SPM
+    /// resource bundles (it expects asset-catalog entries); going through
+    /// NSImage with the absolute file URL always works.
+    private var logoImage: Image {
+        #if canImport(AppKit)
+        if let url = Bundle.module.url(forResource: "AppLogo", withExtension: "png"),
+           let nsImage = NSImage(contentsOf: url) {
+            return Image(nsImage: nsImage)
+        }
+        #endif
+        return Image(systemName: "sparkles")
     }
 }
