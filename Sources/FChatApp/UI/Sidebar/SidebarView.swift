@@ -17,6 +17,12 @@ struct SidebarView: View {
                 ForEach(environment.conversations) { conversation in
                     conversationRow(conversation)
                 }
+                // Drag-to-reorder. Mutating environment.conversations
+                // in place takes the new order through the existing
+                // scheduleSave debounce; no schema change required.
+                .onMove { indices, newOffset in
+                    environment.conversations.move(fromOffsets: indices, toOffset: newOffset)
+                }
             } header: {
                 HStack {
                     Text("Conversations")
