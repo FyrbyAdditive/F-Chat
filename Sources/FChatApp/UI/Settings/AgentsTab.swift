@@ -113,6 +113,8 @@ private struct AgentCard: View {
     @Binding var agent: Agent
     @Bindable var environment: AppEnvironment
     let onDelete: () -> Void
+    /// Per-card expansion state, in-memory only. Mirrors ProviderCard.
+    @State private var isExpanded: Bool = false
 
     private var isDefault: Bool { agent.id == .defaultAgent }
 
@@ -131,89 +133,103 @@ private struct AgentCard: View {
     }
 
     var body: some View {
-        GroupBox(agent.name) {
-            VStack(alignment: .leading, spacing: 10) {
-                // Header row: delete (custom only) or Revert (Default only).
-                HStack {
-                    if isDefault {
-                        Text("Built-in agent — cannot be deleted or renamed.")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    if isDefault {
-                        Button {
-                            agent.basePrompt = nil
-                        } label: {
-                            Label("Revert to built-in", systemImage: "arrow.uturn.backward")
-                        }
-                        .buttonStyle(.borderless)
-                        .disabled(isUsingBuiltIn)
-                        .help("Restore F-Chat's localised default preamble.")
-                    } else {
-                        Button(role: .destructive) {
-                            onDelete()
-                        } label: {
-                            Image(systemName: "trash")
-                        }
-                        .buttonStyle(.borderless)
-                        .help("Delete agent")
-                    }
-                }
-
-                if !isDefault {
-                    LabeledContent("Name") {
-                        TextField("Agent name", text: $agent.name)
-                            .textFieldStyle(.roundedBorder)
-                    }
-                }
-
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Text("System prompt")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                        if isUsingBuiltIn {
-                            Text("Showing F-Chat's built-in preamble. Edit to override.")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    TextEditor(text: Binding(
-                        get: { agent.basePrompt ?? builtInPreamble },
-                        set: { newValue in
-                            let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
-                            if isDefault {
-                                // Equality to the built-in means "no
-                                // override" — store nil so future locale
-                                // changes still re-localise correctly.
-                                if trimmed == builtInPreamble.trimmingCharacters(in: .whitespacesAndNewlines) {
-                                    agent.basePrompt = nil
-                                } else {
-                                    agent.basePrompt = newValue.isEmpty ? nil : newValue
-                                }
-                            } else {
-                                agent.basePrompt = newValue.isEmpty ? nil : newValue
-                            }
-                        }
-                    ))
-                    .font(.body.monospaced())
-                    .frame(minHeight: 140)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 4)
-                            .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
-                    )
-                    .foregroundStyle(isUsingBuiltIn ? .secondary : .primary)
-                }
+        GroupBox {
+            DisclosureGroup(isExpanded: $isExpanded) {
+                agentForm
+                    .padding(.top, 6)
+            } label: {
+                cardHeader
             }
-            .padding(.vertical, 6)
         }
         .onChange(of: agent) { _, new in
             // Save-on-change via the existing scheduleSave debounce; we
             // only need to tell the environment the agent changed so
             // updatedAt bumps and persistence fires.
             environment.updateAgent(new)
+        }
+    }
+
+    /// Always-visible row inside the card: name + per-card inline action
+    /// (Revert for Default, trash for custom agents).
+    private var cardHeader: some View {
+        HStack(spacing: 8) {
+            Text(agent.name)
+                .font(.headline)
+            Spacer()
+            if isDefault {
+                Button {
+                    agent.basePrompt = nil
+                } label: {
+                    Label("Revert to built-in", systemImage: "arrow.uturn.backward")
+                }
+                .buttonStyle(.borderless)
+                .disabled(isUsingBuiltIn)
+                .help("Restore F-Chat's localised default preamble.")
+            } else {
+                Button(role: .destructive) {
+                    onDelete()
+                } label: {
+                    Image(systemName: "trash")
+                }
+                .buttonStyle(.borderless)
+                .help("Delete agent")
+            }
+        }
+        .contentShape(.rect)
+    }
+
+    @ViewBuilder
+    private var agentForm: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if isDefault {
+                Text("Built-in agent — cannot be deleted or renamed.")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            } else {
+                LabeledContent("Name") {
+                    TextField("Agent name", text: $agent.name)
+                        .textFieldStyle(.roundedBorder)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text("System prompt")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    if isUsingBuiltIn {
+                        Text("Showing F-Chat's built-in preamble. Edit to override.")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                TextEditor(text: Binding(
+                    get: { agent.basePrompt ?? builtInPreamble },
+                    set: { newValue in
+                        let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+                        if isDefault {
+                            // Equality to the built-in means "no override"
+                            // — store nil so future locale changes still
+                            // re-localise correctly.
+                            if trimmed == builtInPreamble.trimmingCharacters(in: .whitespacesAndNewlines) {
+                                agent.basePrompt = nil
+                            } else {
+                                agent.basePrompt = newValue.isEmpty ? nil : newValue
+                            }
+                        } else {
+                            agent.basePrompt = newValue.isEmpty ? nil : newValue
+                        }
+                    }
+                ))
+                .font(.body.monospaced())
+                .frame(minHeight: 140)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 4)
+                        .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+                )
+                .foregroundStyle(isUsingBuiltIn ? .secondary : .primary)
+            }
         }
     }
 }
