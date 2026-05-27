@@ -18,7 +18,7 @@ struct CollectionsAttachSection: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {
-                Text("Attached collections are searched by the model via the rag_search tool.")
+                Text("Documents available in this chat")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                 ForEach(collections) { collection in

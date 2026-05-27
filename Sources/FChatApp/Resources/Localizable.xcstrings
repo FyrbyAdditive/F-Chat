@@ -274,23 +274,6 @@
         }
       }
     },
-    "Attached collections are searched by the model via the rag_search tool.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Attached collections are searched by the model via the rag_search tool."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bifogade samlingar söks av modellen via rag_search-verktyget."
-          }
-        }
-      }
-    },
     "Awaiting result…": {
       "extractionState": "manual",
       "localizations": {
@@ -865,6 +848,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Dokument bäddas in lokalt på enheten. Ingen nätverksåtkomst krävs."
+          }
+        }
+      }
+    },
+    "Documents available in this chat": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Documents available in this chat"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dokument i denna chatt"
           }
         }
       }
