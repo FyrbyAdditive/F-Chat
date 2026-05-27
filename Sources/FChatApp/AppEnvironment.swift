@@ -69,7 +69,20 @@ final class AppEnvironment {
     }
     var sidebarSelection: SidebarSelection?
 
-    static let defaultEnabledTools: Set<String> = ["web_search", "web_fetch", "rag_search"]
+    /// Global on-by-default tool toggles surfaced in Settings → Tools.
+    /// `rag_search` is NOT listed here: it's always available (gated
+    /// per-chat by the Inspector's Collections section instead), and is
+    /// admitted unconditionally by the request-build filter regardless
+    /// of what's in `enabledTools`.
+    static let defaultEnabledTools: Set<String> = ["web_search", "web_fetch"]
+
+    /// Tools that bypass the user-facing on/off toggle in Settings →
+    /// Tools and are always advertised to the model. `rag_search` lives
+    /// here because users gate it per-chat via the Inspector's
+    /// Collections section: when no collection is attached, the tool
+    /// has nothing to retrieve anyway, so a global off-switch is
+    /// redundant noise.
+    static let alwaysAvailableTools: Set<String> = ["rag_search"]
 
     /// Cached `/models` results per provider, keyed by ProviderID.
     var detectedModels: [ProviderID: [ModelInfo]] = [:]
@@ -400,7 +413,7 @@ final class AppEnvironment {
         let settings = ChatSettings(
             model: model,
             providerID: provider.id,
-            enabledBuiltInTools: ["web_search", "web_fetch", "rag_search"]
+            enabledBuiltInTools: ["web_search", "web_fetch"]
         )
         let conversation = Conversation(title: title, settings: settings)
         conversations.insert(conversation, at: 0)

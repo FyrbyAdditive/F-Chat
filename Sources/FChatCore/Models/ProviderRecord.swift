@@ -118,7 +118,7 @@ public struct ProviderSamplingDefaults: Sendable, Hashable, Codable {
         reasoningEffort: ReasoningEffort? = nil,
         parallelToolCalls: Bool = true,
         maxToolIterations: Int = 8,
-        defaultEnabledBuiltInTools: Set<String> = ["web_search", "web_fetch", "rag_search"]
+        defaultEnabledBuiltInTools: Set<String> = ["web_search", "web_fetch"]
     ) {
         self.temperature = temperature
         self.topP = topP

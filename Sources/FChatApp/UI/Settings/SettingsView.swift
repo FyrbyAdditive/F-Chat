@@ -399,12 +399,6 @@ private struct ToolsTab: View {
                 )
                 ToolToggleRow(
                     environment: environment,
-                    name: "rag_search",
-                    title: "RAG search",
-                    description: "Query your local document collections."
-                )
-                ToolToggleRow(
-                    environment: environment,
                     name: "current_time",
                     title: "Current time",
                     description: "Lets the model fetch the precise current time on demand. Off by default — the date is already in every message; enable this only when sub-day precision matters."

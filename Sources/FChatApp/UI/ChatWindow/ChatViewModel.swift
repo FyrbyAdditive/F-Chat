@@ -86,6 +86,7 @@ final class ChatViewModel {
         let instructions = composeInstructions(language: environment.promptLanguage)
         let language = environment.promptLanguage
         let enabledToolNames = environment.enabledTools
+            .union(AppEnvironment.alwaysAvailableTools)
         let registry = environment.toolRegistry
 
         // Snapshot the value-typed inputs and run the expensive BPE walk on a
@@ -197,6 +198,7 @@ final class ChatViewModel {
         isStreaming = true
         firstDeltaAt = nil
         let enabledTools = environment.enabledTools
+            .union(AppEnvironment.alwaysAvailableTools)
         streamTask = Task { [weak self, assistantIndex] in
             guard let self else { return }
             await ChatTaskContext.$attachedCollections.withValue(attachedCollections) {

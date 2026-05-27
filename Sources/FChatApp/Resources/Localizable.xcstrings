@@ -1600,57 +1600,6 @@
         }
       }
     },
-    "Query your local document collections.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Query your local document collections."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sök i dina lokala dokumentsamlingar."
-          }
-        }
-      }
-    },
-    "RAG search": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "RAG search"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "RAG-sökning"
-          }
-        }
-      }
-    },
-    "RAG search queries your local collections.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "RAG search queries your local collections."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "RAG-sökning frågar dina lokala samlingar."
-          }
-        }
-      }
-    },
     "Reasoning": {
       "extractionState": "manual",
       "localizations": {
