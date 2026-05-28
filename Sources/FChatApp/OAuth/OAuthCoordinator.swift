@@ -356,11 +356,18 @@ final class OAuthCoordinator {
 
     private func runWebAuthenticationSession(url: URL) async throws -> URL {
         #if canImport(AuthenticationServices)
+        // Configure + start the session here on the main actor (UIKit/AppKit
+        // presentation must be main-thread). The completion handler, though,
+        // is invoked by AuthenticationServices on a background XPC queue —
+        // so it must NOT be main-actor-isolated, or Swift's runtime traps
+        // with a dispatch_assert_queue failure (the observed crash). We
+        // hand it a `@Sendable` closure that does only thread-safe work:
+        // resume the continuation with the raw URL/Error, both Sendable.
+        // The session object is retained for the duration of the await by
+        // the continuation closure's capture.
+        let scheme = Self.callbackURLScheme
         return try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<URL, Error>) in
-            let session = ASWebAuthenticationSession(
-                url: url,
-                callbackURLScheme: Self.callbackURLScheme
-            ) { callbackURL, error in
+            let handler: @Sendable (URL?, (any Error)?) -> Void = { callbackURL, error in
                 if let error {
                     let nsErr = error as NSError
                     if nsErr.domain == ASWebAuthenticationSessionError.errorDomain,
@@ -377,6 +384,11 @@ final class OAuthCoordinator {
                 }
                 continuation.resume(returning: callbackURL)
             }
+            let session = ASWebAuthenticationSession(
+                url: url,
+                callbackURLScheme: scheme,
+                completionHandler: handler
+            )
             session.presentationContextProvider = ContextProvider.shared
             session.prefersEphemeralWebBrowserSession = false
             if !session.start() {
