@@ -159,6 +159,12 @@ private struct MCPServerForm: View {
     @State fileprivate var signInError: String?
     /// True while the interactive OAuth flow is running.
     @State fileprivate var isSigningIn: Bool = false
+    /// Draft static-auth token (bearer or basic API token). Persisted to
+    /// the Keychain on commit, never bound directly to the config.
+    @State fileprivate var staticTokenDraft: String = ""
+    /// Whether a static token is already saved in the Keychain — drives
+    /// the secure field's placeholder.
+    @State fileprivate var hasStaticToken: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -211,6 +217,9 @@ private struct MCPServerForm: View {
         }
         .onChange(of: record) { _, new in
             environment.updateMCPServer(new)
+        }
+        .task(id: record.id) {
+            await refreshSignInState()
         }
     }
 
@@ -301,10 +310,12 @@ private struct MCPServerForm: View {
             if config.useOAuth {
                 oauthFields(config: config)
             } else {
+                staticAuthFields(config: config)
+
                 LabeledContent("Headers") {
-                    // KEY=VALUE per line. Set `Authorization` here for
-                    // bearer-token auth (the lightweight path); for full
-                    // OAuth 2.1 flip the toggle above.
+                    // KEY=VALUE per line. Extra headers sent on every
+                    // request. The Authorization header is managed by the
+                    // Authentication picker above — don't set it here too.
                     TextEditor(text: Binding(
                         get: { config.headers.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: "\n") },
                         set: { newVal in
@@ -323,6 +334,67 @@ private struct MCPServerForm: View {
                     .font(.body.monospaced())
                     .frame(minHeight: 60)
                     .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.secondary.opacity(0.3), lineWidth: 1))
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func staticAuthFields(config: MCPTransportConfig.HTTPConfig) -> some View {
+        Picker("Authentication", selection: Binding(
+            get: { config.authMode },
+            set: { newMode in
+                var c = config
+                c.authMode = newMode
+                record.transport = .http(c)
+            }
+        )) {
+            Text("None").tag(MCPTransportConfig.HTTPAuthMode.none)
+            Text("API token (Bearer)").tag(MCPTransportConfig.HTTPAuthMode.bearer)
+            Text("API token (Basic, email + token)").tag(MCPTransportConfig.HTTPAuthMode.basic)
+        }
+
+        if config.authMode == .basic {
+            LabeledContent("Email") {
+                TextField("you@example.com", text: Binding(
+                    get: { config.basicAuthEmail ?? "" },
+                    set: { newVal in
+                        var c = config
+                        c.basicAuthEmail = newVal.isEmpty ? nil : newVal
+                        record.transport = .http(c)
+                    }
+                ))
+                .textFieldStyle(.roundedBorder)
+            }
+        }
+
+        if config.authMode != .none {
+            LabeledContent("API token") {
+                HStack {
+                    SecureField(hasStaticToken ? "•••••••• (saved in Keychain)" : "paste token",
+                                text: $staticTokenDraft)
+                        .textFieldStyle(.roundedBorder)
+                    Button("Save") {
+                        let token = staticTokenDraft
+                        Task {
+                            await environment.setMCPStaticAuthToken(record.id, token: token)
+                            staticTokenDraft = ""
+                            await refreshSignInState()
+                        }
+                    }
+                    .disabled(staticTokenDraft.isEmpty)
+                    if hasStaticToken {
+                        Button(role: .destructive) {
+                            Task {
+                                await environment.setMCPStaticAuthToken(record.id, token: nil)
+                                await refreshSignInState()
+                            }
+                        } label: {
+                            Image(systemName: "trash")
+                        }
+                        .buttonStyle(.borderless)
+                        .help("Remove saved token")
+                    }
                 }
             }
         }
@@ -407,14 +479,11 @@ private struct MCPServerForm: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
 
-        Group {}
-            .task(id: record.id) {
-                await refreshSignInState()
-            }
     }
 
     private func refreshSignInState() async {
         hasAccessToken = await environment.oauthCoordinator.hasStoredAccessToken(for: record.id)
+        hasStaticToken = await environment.hasMCPStaticAuthToken(record.id)
     }
 }
 

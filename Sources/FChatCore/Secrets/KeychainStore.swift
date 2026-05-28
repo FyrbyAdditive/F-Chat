@@ -123,6 +123,13 @@ public enum KeychainAccount {
     public static func mcpTokenMetadata(_ id: MCPServerID) -> String {
         "mcp:\(id.rawValue):oauthMetadata"
     }
+    /// Non-OAuth static auth credential for an HTTP MCP server: the
+    /// raw bearer token, or (for Basic auth) the API token half of the
+    /// email:token pair. The email itself is not a secret and lives in
+    /// the server's HTTPConfig.
+    public static func mcpStaticAuthToken(_ id: MCPServerID) -> String {
+        "mcp:\(id.rawValue):staticAuthToken"
+    }
 }
 
 public actor InMemorySecretStore: SecretStore {

@@ -87,6 +87,57 @@
         }
       }
     },
+    "API token": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API token"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API-token"
+          }
+        }
+      }
+    },
+    "API token (Basic, email + token)": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API token (Basic, email + token)"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API-token (Basic, e-post + token)"
+          }
+        }
+      }
+    },
+    "API token (Bearer)": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API token (Bearer)"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API-token (Bearer)"
+          }
+        }
+      }
+    },
     "About": {
       "extractionState": "manual",
       "localizations": {
@@ -321,6 +372,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Argument (kommaseparerade)"
+          }
+        }
+      }
+    },
+    "Authentication": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Authentication"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Autentisering"
           }
         }
       }
@@ -1107,6 +1175,23 @@
         }
       }
     },
+    "Email": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Email"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "E-post"
+          }
+        }
+      }
+    },
     "Enter a full URL including scheme.": {
       "extractionState": "manual",
       "localizations": {
@@ -1736,6 +1821,23 @@
         }
       }
     },
+    "None": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "None"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ingen"
+          }
+        }
+      }
+    },
     "Not checked": {
       "extractionState": "manual",
       "localizations": {
@@ -1987,6 +2089,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ta bort leverantör"
+          }
+        }
+      }
+    },
+    "Remove saved token": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove saved token"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ta bort sparad token"
           }
         }
       }
@@ -2977,6 +3096,23 @@
         }
       }
     },
+    "paste token": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "paste token"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "klistra in token"
+          }
+        }
+      }
+    },
     "server default": {
       "extractionState": "manual",
       "localizations": {
@@ -3041,6 +3177,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "top_p"
+          }
+        }
+      }
+    },
+    "you@example.com": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "you@example.com"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "du@exempel.se"
           }
         }
       }

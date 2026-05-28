@@ -46,9 +46,19 @@ final class MCPRegistry {
     /// Optional so test paths can construct a registry without one.
     let oauthCoordinator: OAuthCoordinator?
 
-    init(toolRegistry: ToolRegistry, oauthCoordinator: OAuthCoordinator? = nil) {
+    /// Reads non-OAuth static auth tokens (bearer / basic) from the
+    /// Keychain when building the Authorization header. Optional so test
+    /// paths can omit it.
+    private let secretStore: (any SecretStore)?
+
+    init(
+        toolRegistry: ToolRegistry,
+        oauthCoordinator: OAuthCoordinator? = nil,
+        secretStore: (any SecretStore)? = nil
+    ) {
         self.toolRegistry = toolRegistry
         self.oauthCoordinator = oauthCoordinator
+        self.secretStore = secretStore
     }
 
     /// Mark a server's card as failed with a reason. Used by the
@@ -120,6 +130,9 @@ final class MCPRegistry {
                     status[record.id] = .failed(Self.describe(error))
                     return
                 }
+            } else if let authHeader = await staticAuthorizationHeader(for: record.id, config: config) {
+                // Non-OAuth bearer / basic auth — token from Keychain.
+                headers["Authorization"] = authHeader
             }
             let http = HTTPMCPTransport(
                 url: config.url,
@@ -160,6 +173,31 @@ final class MCPRegistry {
         } catch {
             await client.shutdown()
             status[record.id] = .failed(Self.describe(error))
+        }
+    }
+
+    /// Build the static (non-OAuth) Authorization header value for an
+    /// HTTP server from its auth mode + the Keychain-stored token.
+    /// Returns nil when the mode is `.none`, the token is missing, or
+    /// no secret store is configured. For `.basic`, base64-encodes
+    /// `email:token` (e.g. Atlassian personal API tokens).
+    private func staticAuthorizationHeader(
+        for id: MCPServerID,
+        config: MCPTransportConfig.HTTPConfig
+    ) async -> String? {
+        guard config.authMode != .none, let secretStore else { return nil }
+        let token = (try? await secretStore.secret(for: KeychainAccount.mcpStaticAuthToken(id))) ?? nil
+        guard let token, !token.isEmpty else { return nil }
+        switch config.authMode {
+        case .none:
+            return nil
+        case .bearer:
+            return "Bearer \(token)"
+        case .basic:
+            let email = config.basicAuthEmail ?? ""
+            let pair = "\(email):\(token)"
+            let encoded = Data(pair.utf8).base64EncodedString()
+            return "Basic \(encoded)"
         }
     }
 

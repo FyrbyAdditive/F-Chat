@@ -175,7 +175,11 @@ final class AppEnvironment {
         // Session-scoped registry; lazy-connects via ensureLoaded on
         // first chat send. Holding the toolRegistry lets it
         // dynamically register/unregister MCPToolAdapter instances.
-        self.mcpRegistry = MCPRegistry(toolRegistry: self.toolRegistry, oauthCoordinator: oauth)
+        self.mcpRegistry = MCPRegistry(
+            toolRegistry: self.toolRegistry,
+            oauthCoordinator: oauth,
+            secretStore: self.secretStore
+        )
         // Resolve the active provider id if it's stale (deleted) or missing.
         if let active = self.activeProviderID, !self.providerRecords.contains(where: { $0.id == active }) {
             self.activeProviderID = self.providerRecords.first?.id
@@ -517,6 +521,24 @@ final class AppEnvironment {
     func signOutOfMCPServer(_ id: MCPServerID) async {
         await mcpRegistry.disconnect(id)
         await oauthCoordinator.clearTokens(for: id)
+    }
+
+    /// Store (or clear, when nil/empty) the non-OAuth static auth token
+    /// for an HTTP MCP server in the Keychain. The token is the bearer
+    /// token, or the API-token half of a Basic email:token pair.
+    func setMCPStaticAuthToken(_ id: MCPServerID, token: String?) async {
+        let account = KeychainAccount.mcpStaticAuthToken(id)
+        if let token, !token.isEmpty {
+            try? await secretStore.setSecret(token, for: account)
+        } else {
+            try? await secretStore.deleteSecret(for: account)
+        }
+    }
+
+    /// Whether a static auth token is stored for this server — drives
+    /// the placeholder text in the Settings field.
+    func hasMCPStaticAuthToken(_ id: MCPServerID) async -> Bool {
+        ((try? await secretStore.secret(for: KeychainAccount.mcpStaticAuthToken(id))) ?? nil) != nil
     }
 
     func newConversation(title: String) {
