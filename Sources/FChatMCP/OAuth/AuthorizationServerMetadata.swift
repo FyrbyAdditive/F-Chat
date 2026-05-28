@@ -89,4 +89,68 @@ public struct AuthorizationServerMetadata: Sendable, Equatable {
         components.path = "/.well-known/oauth-authorization-server"
         return components.url ?? authorizationServer
     }
+
+    public static func wellKnownURL(for authorizationServer: URL, document: String) -> URL {
+        var components = URLComponents()
+        components.scheme = authorizationServer.scheme
+        components.host = authorizationServer.host
+        components.port = authorizationServer.port
+        components.path = "/.well-known/\(document)"
+        return components.url ?? authorizationServer
+    }
+
+    /// Probe a server origin directly for auth-server metadata, trying
+    /// `oauth-authorization-server` then `openid-configuration`. Used
+    /// in the discovery cascade when a server is its own authorization
+    /// server and doesn't expose protected-resource-metadata. Returns
+    /// nil when neither document resolves.
+    public static func probeOrigin(
+        _ origin: URL,
+        session: URLSession
+    ) async -> AuthorizationServerMetadata? {
+        for document in ["oauth-authorization-server", "openid-configuration"] {
+            let url = wellKnownURL(for: origin, document: document)
+            if let meta = try? await fetchExact(url, session: session) {
+                return meta
+            }
+        }
+        return nil
+    }
+
+    /// Fetch + parse from an exact .well-known URL (no rebasing).
+    public static func fetchExact(
+        _ url: URL,
+        session: URLSession
+    ) async throws -> AuthorizationServerMetadata {
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw AuthError.discoveryFailed(reason: "no metadata at \(url)")
+        }
+        guard let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else {
+            throw AuthError.discoveryFailed(reason: "non-JSON body from \(url)")
+        }
+        guard let issuer = json["issuer"] as? String,
+              let authString = json["authorization_endpoint"] as? String,
+              let authURL = URL(string: authString),
+              let tokenString = json["token_endpoint"] as? String,
+              let tokenURL = URL(string: tokenString) else {
+            throw AuthError.missingMetadata(field: "authorization_endpoint/token_endpoint")
+        }
+        let registrationURL = (json["registration_endpoint"] as? String).flatMap { URL(string: $0) }
+        let methods = (json["code_challenge_methods_supported"] as? [String]) ?? []
+        let grants = (json["grant_types_supported"] as? [String]) ?? []
+        let scopes = (json["scopes_supported"] as? [String]) ?? []
+        return AuthorizationServerMetadata(
+            issuer: issuer,
+            authorizationEndpoint: authURL,
+            tokenEndpoint: tokenURL,
+            registrationEndpoint: registrationURL,
+            codeChallengeMethodsSupported: methods,
+            grantTypesSupported: grants,
+            scopesSupported: scopes
+        )
+    }
 }

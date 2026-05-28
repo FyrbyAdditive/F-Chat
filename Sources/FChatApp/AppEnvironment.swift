@@ -495,11 +495,20 @@ final class AppEnvironment {
     func signInToMCPServer(_ id: MCPServerID) async throws {
         guard let record = mcpServers.first(where: { $0.id == id }) else { return }
         guard case .http(let httpConfig) = record.transport else { return }
-        try await oauthCoordinator.reauthorize(
-            serverID: id,
-            resource: httpConfig.url,
-            httpConfig: httpConfig
-        )
+        do {
+            try await oauthCoordinator.reauthorize(
+                serverID: id,
+                resource: httpConfig.url,
+                httpConfig: httpConfig
+            )
+        } catch {
+            // Surface the failure in the always-visible card header too,
+            // not just the form's inline error line, then rethrow so the
+            // button's catch can render the detail.
+            let reason = (error as? LocalizedError)?.errorDescription ?? "\(error)"
+            mcpRegistry.setFailedStatus(id, reason: reason)
+            throw error
+        }
         await mcpRegistry.connect(record)
     }
 

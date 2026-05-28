@@ -154,6 +154,11 @@ private struct MCPServerForm: View {
     /// server" lookup — drives the Sign in vs Re-authenticate label
     /// and the Sign out button's enabled state.
     @State fileprivate var hasAccessToken: Bool = false
+    /// Human-readable reason the last sign-in attempt failed, shown
+    /// inline under the buttons. nil when no error.
+    @State fileprivate var signInError: String?
+    /// True while the interactive OAuth flow is running.
+    @State fileprivate var isSigningIn: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -364,12 +369,20 @@ private struct MCPServerForm: View {
         HStack {
             Button {
                 Task {
-                    try? await environment.signInToMCPServer(record.id)
+                    signInError = nil
+                    isSigningIn = true
+                    do {
+                        try await environment.signInToMCPServer(record.id)
+                    } catch {
+                        signInError = (error as? LocalizedError)?.errorDescription ?? "\(error)"
+                    }
+                    isSigningIn = false
                     await refreshSignInState()
                 }
             } label: {
                 Label(hasAccessToken ? "Re-authenticate" : "Sign in", systemImage: "key")
             }
+            .disabled(isSigningIn)
 
             Button(role: .destructive) {
                 Task {
@@ -381,11 +394,23 @@ private struct MCPServerForm: View {
             }
             .disabled(!hasAccessToken)
 
+            if isSigningIn {
+                ProgressView().controlSize(.small)
+            }
             Spacer()
         }
-        .task(id: record.id) {
-            await refreshSignInState()
+
+        if let signInError {
+            Text(signInError)
+                .font(.caption)
+                .foregroundStyle(.red)
+                .fixedSize(horizontal: false, vertical: true)
         }
+
+        Group {}
+            .task(id: record.id) {
+                await refreshSignInState()
+            }
     }
 
     private func refreshSignInState() async {

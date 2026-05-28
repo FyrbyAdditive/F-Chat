@@ -140,23 +140,13 @@ final class OAuthCoordinator {
         resource: URL,
         httpConfig: MCPTransportConfig.HTTPConfig
     ) async throws -> String {
-        // 1. Discover authorization server.
-        let authServerURL: URL
-        if let override = httpConfig.oauthAuthorizationServerURL {
-            authServerURL = override
-        } else {
-            let resourceMeta = try await ProtectedResourceMetadata.fetch(
-                resource: resource,
-                session: session
-            )
-            guard let first = resourceMeta.authorizationServers.first else {
-                throw AuthError.missingMetadata(field: "authorization_servers")
-            }
-            authServerURL = first
-        }
-
-        // 2. Fetch auth-server metadata (cached).
-        let asMeta = try await fetchAuthorizationServerMetadata(authServerURL)
+        // 1 + 2. Discover the authorization server + its metadata via a
+        // resilient cascade. Real MCP servers vary wildly in how they
+        // advertise OAuth; try every documented mechanism in order.
+        let asMeta = try await discoverAuthorizationServer(
+            resource: resource,
+            httpConfig: httpConfig
+        )
         guard asMeta.supportsS256PKCE else {
             throw AuthError.configurationError(reason: "server doesn't advertise S256 PKCE")
         }
@@ -414,6 +404,96 @@ final class OAuthCoordinator {
         return (code, state)
     }
 
+    // MARK: - Discovery cascade
+
+    /// Resolve the authorization server's metadata using every
+    /// mechanism MCP servers use in the wild, stopping at the first
+    /// success. Throws a single descriptive error listing what was
+    /// tried if none resolve.
+    private func discoverAuthorizationServer(
+        resource: URL,
+        httpConfig: MCPTransportConfig.HTTPConfig
+    ) async throws -> AuthorizationServerMetadata {
+        var attempts: [String] = []
+
+        // 1. Explicit override.
+        if let override = httpConfig.oauthAuthorizationServerURL {
+            return try await fetchAuthorizationServerMetadata(override)
+        }
+
+        // 2. Unauthenticated probe → WWW-Authenticate resource_metadata.
+        if let metadataURL = await probeResourceMetadataURL(resource: resource) {
+            attempts.append("WWW-Authenticate resource_metadata")
+            if let meta = try? await resolveViaProtectedResource(metadataURLFetch: {
+                try await ProtectedResourceMetadata.fetch(at: metadataURL, session: self.session)
+            }) {
+                return meta
+            }
+        }
+
+        // 3. Host-root protected-resource-metadata.
+        attempts.append("host-root /.well-known/oauth-protected-resource")
+        if let meta = try? await resolveViaProtectedResource(metadataURLFetch: {
+            try await ProtectedResourceMetadata.fetch(resource: resource, session: self.session)
+        }) {
+            return meta
+        }
+
+        // 4. Path-scoped protected-resource-metadata.
+        if let pathScoped = ProtectedResourceMetadata.pathScopedWellKnownURL(for: resource) {
+            attempts.append("path-scoped protected-resource-metadata")
+            if let meta = try? await resolveViaProtectedResource(metadataURLFetch: {
+                try await ProtectedResourceMetadata.fetch(at: pathScoped, session: self.session)
+            }) {
+                return meta
+            }
+        }
+
+        // 5. Direct auth-server metadata at the MCP origin (server is
+        //    its own authorization server).
+        attempts.append("origin auth-server metadata")
+        if let meta = await AuthorizationServerMetadata.probeOrigin(resource, session: session) {
+            return meta
+        }
+
+        throw AuthError.discoveryFailed(
+            reason: "no OAuth metadata found for \(resource.absoluteString). Tried: \(attempts.joined(separator: ", ")). Set the Authorization server URL manually if the server uses a non-standard location."
+        )
+    }
+
+    /// Issue an unauthenticated request to the MCP endpoint and, if it
+    /// 401s with a `WWW-Authenticate: … resource_metadata="<url>"`
+    /// header, return that URL. Best-effort; returns nil on anything else.
+    private func probeResourceMetadataURL(resource: URL) async -> URL? {
+        var request = URLRequest(url: resource)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json, text/event-stream", forHTTPHeaderField: "Accept")
+        // A minimal MCP initialize-ish body; servers that gate on auth
+        // 401 before parsing it, which is all we need.
+        request.httpBody = Data("{}".utf8)
+        guard let (_, response) = try? await session.data(for: request),
+              let http = response as? HTTPURLResponse,
+              http.statusCode == 401,
+              let header = http.value(forHTTPHeaderField: "WWW-Authenticate") else {
+            return nil
+        }
+        return ProtectedResourceMetadata.resourceMetadataURL(fromWWWAuthenticate: header)
+    }
+
+    /// Resolve protected-resource-metadata via the supplied fetch, then
+    /// chase its first authorization_servers entry to that server's
+    /// metadata.
+    private func resolveViaProtectedResource(
+        metadataURLFetch: () async throws -> ProtectedResourceMetadata
+    ) async throws -> AuthorizationServerMetadata {
+        let prm = try await metadataURLFetch()
+        guard let first = prm.authorizationServers.first else {
+            throw AuthError.missingMetadata(field: "authorization_servers")
+        }
+        return try await fetchAuthorizationServerMetadata(first)
+    }
+
     // MARK: - Metadata caching
 
     private func fetchAuthorizationServerMetadata(_ url: URL) async throws -> AuthorizationServerMetadata {
@@ -489,13 +569,19 @@ final class OAuthCoordinator {
 private final class ContextProvider: NSObject, ASWebAuthenticationPresentationContextProviding, @unchecked Sendable {
     static let shared = ContextProvider()
     nonisolated func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
-        // Use the keyWindow if available; ASWebAuthenticationSession
-        // tolerates a "best effort" anchor here. The protocol method
-        // is declared nonisolated, so we hop into MainActor to read
-        // the AppKit state safely.
+        // Must return a real on-screen NSWindow. A bare
+        // `ASPresentationAnchor()` placeholder makes session.start()
+        // silently no-op on macOS — which was part of the "nothing
+        // happens" bug. Prefer key → main → any visible window. The
+        // Settings window is always open when the Sign in button is
+        // reachable, so a window will exist; the final non-visible
+        // fallback only guards a degenerate state.
         MainActor.assumeIsolated {
             let app = NSApplication.shared
-            return app.keyWindow ?? app.windows.first ?? ASPresentationAnchor()
+            if let key = app.keyWindow { return key }
+            if let main = app.mainWindow { return main }
+            if let visible = app.windows.first(where: { $0.isVisible }) { return visible }
+            return app.windows.first ?? ASPresentationAnchor()
         }
     }
 }

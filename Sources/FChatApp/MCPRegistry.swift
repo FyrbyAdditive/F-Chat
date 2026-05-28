@@ -51,6 +51,14 @@ final class MCPRegistry {
         self.oauthCoordinator = oauthCoordinator
     }
 
+    /// Mark a server's card as failed with a reason. Used by the
+    /// AppEnvironment sign-in helper so an interactive-auth failure
+    /// shows in the always-visible card header, not just the form's
+    /// inline error line.
+    func setFailedStatus(_ id: MCPServerID, reason: String) {
+        status[id] = .failed(reason)
+    }
+
     /// Idempotent: walks the enabled-server list once per session and
     /// connects each (sequentially, so we don't spawn N subprocesses
     /// before the first chat turn even begins). Subsequent calls are
