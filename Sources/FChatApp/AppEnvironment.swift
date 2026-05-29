@@ -270,12 +270,22 @@ final class AppEnvironment {
         config.timeoutIntervalForRequest = record.requestTimeout
         config.timeoutIntervalForResource = max(record.requestTimeout * 10, 3600)
         let session = URLSession(configuration: config)
-        return OpenAIResponsesProvider(
-            id: record.id,
-            baseURL: record.baseURL,
-            session: session,
-            secretStore: secretStore
-        )
+        switch record.apiKind {
+        case .openAIResponses:
+            return OpenAIResponsesProvider(
+                id: record.id,
+                baseURL: record.baseURL,
+                session: session,
+                secretStore: secretStore
+            )
+        case .anthropicMessages:
+            return AnthropicMessagesProvider(
+                id: record.id,
+                baseURL: record.baseURL,
+                session: session,
+                secretStore: secretStore
+            )
+        }
     }
 
     func refreshModels(for record: ProviderRecord) async {
@@ -313,9 +323,14 @@ final class AppEnvironment {
         }
     }
 
-    func addProvider(displayName: String, baseURL: URL) -> ProviderRecord {
+    func addProvider(displayName: String, baseURL: URL, apiKind: LLMAPIKind = .openAIResponses) -> ProviderRecord {
         let id = ProviderID(rawValue: slug(from: displayName.isEmpty ? baseURL.host ?? "provider" : displayName))
-        let record = ProviderRecord(id: id, displayName: displayName.isEmpty ? id.rawValue : displayName, baseURL: baseURL)
+        let record = ProviderRecord(
+            id: id,
+            displayName: displayName.isEmpty ? id.rawValue : displayName,
+            baseURL: baseURL,
+            apiKind: apiKind
+        )
         providerRecords.append(record)
         // If this is the first provider, make it the active default.
         if activeProviderID == nil {

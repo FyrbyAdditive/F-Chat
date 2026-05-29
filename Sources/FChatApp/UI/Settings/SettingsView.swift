@@ -155,6 +155,16 @@ private struct ProviderCard: View {
                 Spacer()
             }
 
+            HStack {
+                Text("API type")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text(record.apiKind.displayName)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer()
+            }
+
                 LabeledRow(label: "Display name") {
                     TextField("Display name", text: $record.displayName)
                         .textFieldStyle(.roundedBorder)
@@ -359,7 +369,8 @@ private struct AddProviderSheet: View {
     @Bindable var environment: AppEnvironment
     @Binding var isPresented: Bool
     @State private var name: String = ""
-    @State private var url: String = "https://"
+    @State private var apiKind: LLMAPIKind = .openAIResponses
+    @State private var url: String = LLMAPIKind.openAIResponses.defaultBaseURL
     @State private var error: String?
 
     var body: some View {
@@ -367,6 +378,20 @@ private struct AddProviderSheet: View {
             Text("Add provider").font(.title3.bold())
             TextField("Display name", text: $name)
                 .textFieldStyle(.roundedBorder)
+            Picker("API type", selection: $apiKind) {
+                ForEach(LLMAPIKind.allCases, id: \.self) { kind in
+                    Text(kind.displayName).tag(kind)
+                }
+            }
+            .pickerStyle(.segmented)
+            .onChange(of: apiKind) { old, new in
+                // Prefill the URL with the new kind's default endpoint, but
+                // only when the user hasn't typed their own URL yet (the field
+                // still holds the previous kind's default).
+                if url.isEmpty || url == old.defaultBaseURL {
+                    url = new.defaultBaseURL
+                }
+            }
             TextField("https://host/v1", text: $url)
                 .textFieldStyle(.roundedBorder)
             if let error {
@@ -381,7 +406,7 @@ private struct AddProviderSheet: View {
                         error = String(localized: "Enter a full URL including scheme.")
                         return
                     }
-                    _ = environment.addProvider(displayName: name, baseURL: parsed)
+                    _ = environment.addProvider(displayName: name, baseURL: parsed, apiKind: apiKind)
                     isPresented = false
                 }
                 .keyboardShortcut(.defaultAction)

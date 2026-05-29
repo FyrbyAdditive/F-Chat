@@ -1,5 +1,32 @@
 import Foundation
 
+/// Which wire protocol a provider speaks. Determines which concrete
+/// `LLMProvider` implementation `AppEnvironment.makeRuntimeProvider` builds.
+/// Fixed at provider-creation time (like `id`).
+public enum LLMAPIKind: String, Sendable, Hashable, Codable, CaseIterable {
+    /// OpenAI Responses API (`/responses`, SSE). The original/default.
+    case openAIResponses = "openai-responses"
+    /// Anthropic Messages API (`/messages`, SSE, `x-api-key` auth).
+    case anthropicMessages = "anthropic-messages"
+
+    public var displayName: String {
+        switch self {
+        case .openAIResponses: return "OpenAI (Responses)"
+        case .anthropicMessages: return "Anthropic (Messages)"
+        }
+    }
+
+    /// Endpoint to prefill in the add-provider sheet when this kind is picked.
+    /// OpenAI keeps the neutral `https://` placeholder (servers vary widely);
+    /// Anthropic points at the public API by default.
+    public var defaultBaseURL: String {
+        switch self {
+        case .openAIResponses: return "https://"
+        case .anthropicMessages: return "https://api.anthropic.com/v1"
+        }
+    }
+}
+
 public struct ProviderRecord: Identifiable, Sendable, Hashable, Codable {
     public let id: ProviderID
     public var displayName: String
@@ -21,6 +48,10 @@ public struct ProviderRecord: Identifiable, Sendable, Hashable, Codable {
     /// idle seconds. Default 120s. Optional so older state files load
     /// cleanly (resolved to the default when absent).
     public var requestTimeout: TimeInterval
+    /// Which wire protocol this provider speaks. Optional on older state
+    /// files (resolves to `.openAIResponses`, the only kind that existed
+    /// before). Fixed at creation; the card shows it read-only.
+    public var apiKind: LLMAPIKind
 
     /// Default per-request timeout. Doubled from the previous implicit
     /// URLSession.shared default of 60s.
@@ -35,7 +66,8 @@ public struct ProviderRecord: Identifiable, Sendable, Hashable, Codable {
         modelOverrides: [ModelOverride] = [],
         sampling: ProviderSamplingDefaults = .init(),
         context: ProviderContextSettings = .init(),
-        requestTimeout: TimeInterval = ProviderRecord.defaultRequestTimeout
+        requestTimeout: TimeInterval = ProviderRecord.defaultRequestTimeout,
+        apiKind: LLMAPIKind = .openAIResponses
     ) {
         self.id = id
         self.displayName = displayName
@@ -46,11 +78,12 @@ public struct ProviderRecord: Identifiable, Sendable, Hashable, Codable {
         self.sampling = sampling
         self.context = context
         self.requestTimeout = requestTimeout
+        self.apiKind = apiKind
     }
 
     // Custom Decodable to tolerate missing optional fields on old state files.
     private enum CodingKeys: String, CodingKey {
-        case id, displayName, baseURL, defaultModel, capability, modelOverrides, sampling, context, requestTimeout
+        case id, displayName, baseURL, defaultModel, capability, modelOverrides, sampling, context, requestTimeout, apiKind
     }
 
     public init(from decoder: Decoder) throws {
@@ -65,6 +98,7 @@ public struct ProviderRecord: Identifiable, Sendable, Hashable, Codable {
         self.context = try c.decodeIfPresent(ProviderContextSettings.self, forKey: .context) ?? .init()
         self.requestTimeout = try c.decodeIfPresent(TimeInterval.self, forKey: .requestTimeout)
             ?? ProviderRecord.defaultRequestTimeout
+        self.apiKind = try c.decodeIfPresent(LLMAPIKind.self, forKey: .apiKind) ?? .openAIResponses
     }
 }
 

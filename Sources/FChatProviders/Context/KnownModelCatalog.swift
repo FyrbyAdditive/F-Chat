@@ -58,5 +58,8 @@ public enum KnownModelCatalog {
         ("claude-opus-4", 200_000),
         ("claude-sonnet-4", 1_000_000),
         ("claude-haiku-4", 200_000),
+        // Broad fallback for any future Claude id not matched above. The
+        // shortest prefix, so it only wins when nothing more specific does.
+        ("claude", 200_000),
     ]
 }

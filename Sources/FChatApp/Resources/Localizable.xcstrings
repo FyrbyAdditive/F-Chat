@@ -3673,6 +3673,23 @@
           }
         }
       }
+    },
+    "API type": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API type"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API-typ"
+          }
+        }
+      }
     }
   }
 }
