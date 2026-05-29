@@ -251,9 +251,7 @@ final class ChatViewModel {
                         toolDefinitions: toolDefinitions,
                         llm: llm,
                         budget: budget,
-                        userMessageTokens: userMessageTokens,
-                        userMessageID: userMessageID,
-                        assistantMessageID: assistantMessageID
+                        userMessageID: userMessageID
                     )
                     for try await event in runner.run(initial: request) {
                         await self.apply(event: event, assistantIndex: assistantIndex)
@@ -376,9 +374,7 @@ final class ChatViewModel {
         toolDefinitions: [ToolDefinition],
         llm: any LLMProvider,
         budget: ContextBudget,
-        userMessageTokens: Int,
-        userMessageID: MessageID,
-        assistantMessageID: MessageID
+        userMessageID: MessageID
     ) async throws -> ChatRequest {
         let tokenizer = TokenizerCache.shared.get(modelID: modelID)
         let builder = RequestPayloadBuilder(tokenizer: tokenizer)
@@ -451,7 +447,6 @@ final class ChatViewModel {
                     tools: toolDefinitions
                 )
                 await cacheContextSize(messageID: userMessageID, tokens: projectedTotal)
-                _ = assistantMessageID
                 return request
             }
 
@@ -495,8 +490,6 @@ final class ChatViewModel {
             cache: tokenCountCache
         )
         await cacheContextSize(messageID: userMessageID, tokens: finalProjection.totalTokens)
-        _ = userMessageTokens
-        _ = assistantMessageID
         return makeChatRequest(
             modelID: modelID,
             sampling: providerRecord.sampling,
