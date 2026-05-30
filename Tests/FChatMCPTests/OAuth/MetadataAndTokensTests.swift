@@ -61,6 +61,20 @@ struct MetadataAndTokensTests {
         #expect(meta.supportsRefreshToken)
     }
 
+    @Test func authorizationServerMetadataRejectsNonPublicEndpoint() async {
+        // A hostile/MITM'd metadata doc that points the token endpoint at an
+        // internal host must be rejected before we ever POST the bearer header.
+        let wellKnown = URL(string: "https://stub-\(UUID().uuidString).test/.well-known/oauth-authorization-server")!
+        let session = registerStub(at: wellKnown, response: .json([
+            "issuer": "https://auth.example.com",
+            "authorization_endpoint": "https://auth.example.com/authorize",
+            "token_endpoint": "http://169.254.169.254/token",   // cloud metadata
+        ]))
+        await #expect(throws: AuthError.self) {
+            _ = try await AuthorizationServerMetadata.fetchExact(wellKnown, session: session)
+        }
+    }
+
     @Test func dynamicClientRegistrationParsesResponse() async throws {
         // DCR posts to whatever URL we give it; no rebase logic.
         let endpoint = URL(string: "https://stub-\(UUID().uuidString).test/register")!
@@ -105,6 +119,15 @@ struct MetadataAndTokensTests {
         { "error": "invalid_grant", "error_description": "refresh token expired" }
         """
         #expect(throws: AuthError.needsReAuthentication) {
+            _ = try TokenResponse.parse(Data(json.utf8))
+        }
+    }
+
+    @Test func tokenResponseMissingAccessTokenThrows() {
+        // A token endpoint that returns 200 but no access_token must fail
+        // closed, not yield an empty/garbage bearer.
+        let json = #"{ "token_type": "Bearer", "expires_in": 3600 }"#
+        #expect(throws: (any Error).self) {
             _ = try TokenResponse.parse(Data(json.utf8))
         }
     }

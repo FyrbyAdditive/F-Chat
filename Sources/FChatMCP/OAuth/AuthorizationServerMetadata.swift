@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Tim Ellis / Fyrby Additive Manufacturing & Engineering
 
 import Foundation
+import FChatCore
 
 /// RFC 8414 authorization-server metadata. Tells us where to send the
 /// user's browser, where to POST for tokens, and (optionally) where to
@@ -140,6 +141,13 @@ public struct AuthorizationServerMetadata: Sendable, Equatable {
             throw AuthError.missingMetadata(field: "authorization_endpoint/token_endpoint")
         }
         let registrationURL = (json["registration_endpoint"] as? String).flatMap { URL(string: $0) }
+        // SSRF guard: a server must not advertise endpoints that point at
+        // local/private hosts — we POST to these (with the bearer header).
+        for endpoint in [authURL, tokenURL] + (registrationURL.map { [$0] } ?? []) {
+            if case .failure(let reason) = URLSafety.validatePublicHTTP(endpoint) {
+                throw AuthError.discoveryFailed(reason: "metadata advertised a non-public endpoint (\(endpoint)): \(reason)")
+            }
+        }
         let methods = (json["code_challenge_methods_supported"] as? [String]) ?? []
         let grants = (json["grant_types_supported"] as? [String]) ?? []
         let scopes = (json["scopes_supported"] as? [String]) ?? []

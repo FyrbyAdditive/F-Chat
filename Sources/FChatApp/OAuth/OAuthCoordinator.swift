@@ -54,7 +54,9 @@ final class OAuthCoordinator {
             let config = URLSessionConfiguration.ephemeral
             config.timeoutIntervalForRequest = 30
             config.timeoutIntervalForResource = 600
-            self.session = URLSession(configuration: config)
+            // SSRF-guard redirects so a hostile token/registration endpoint
+            // can't bounce the bearer-carrying request to an internal host.
+            self.session = SSRFGuardingSessionDelegate.makeSession(configuration: config)
         }
     }
 

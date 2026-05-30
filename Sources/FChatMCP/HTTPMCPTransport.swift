@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Tim Ellis / Fyrby Additive Manufacturing & Engineering
 
 import Foundation
+import FChatCore
 
 /// Streamable HTTP MCP transport (MCP 2025-11-25 spec, without OAuth).
 ///
@@ -50,11 +51,13 @@ public actor HTTPMCPTransport: MCPTransport {
             self.session = session
         } else {
             // Per-instance URLSession so an `invalidateAndCancel` in close()
-            // tears down any in-flight long-lived SSE streams cleanly.
+            // tears down any in-flight long-lived SSE streams cleanly. The SSRF
+            // guard refuses redirects to non-public hosts (the Authorization
+            // header must not leak to an internal address).
             let config = URLSessionConfiguration.default
             config.timeoutIntervalForRequest = 30
             config.timeoutIntervalForResource = 600
-            self.session = URLSession(configuration: config)
+            self.session = SSRFGuardingSessionDelegate.makeSession(configuration: config)
         }
 
         var c: AsyncThrowingStream<JSONRPCFrame, Error>.Continuation!
