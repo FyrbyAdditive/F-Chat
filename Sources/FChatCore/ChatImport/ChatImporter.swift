@@ -40,7 +40,10 @@ public enum ChatImporter {
 
         let format: ChatImportFormat
         let chats: [ImportedChat]
-        if ChatGPTImporter.looksLikeChatGPT(json) {
+        if NativeImporter.looksLikeFChat(json) {
+            format = .fchat
+            chats = try NativeImporter.parse(jsonData)
+        } else if ChatGPTImporter.looksLikeChatGPT(json) {
             format = .chatGPT
             chats = try ChatGPTImporter.parse(jsonData)
         } else if ClaudeImporter.looksLikeClaude(json) {

@@ -106,6 +106,14 @@ final class AppEnvironment {
     /// Open the chat-import file picker (File menu / toolbar share one flow).
     func requestImportChats() { importChatsRequests += 1 }
 
+    /// Bumped to request the export wizard from outside the sidebar (the File ▸
+    /// Export Chats… menu command and the toolbar button). `SidebarView` watches
+    /// this counter and presents the selection wizard.
+    var exportChatsRequests = 0
+
+    /// Open the export selection wizard (File menu / toolbar share one flow).
+    func requestExportChats() { exportChatsRequests += 1 }
+
     /// Global on-by-default tool toggles surfaced in Settings → Tools.
     /// `rag_search` is NOT listed here: it's always available (gated
     /// per-chat by the Inspector's Collections section instead), and is
@@ -761,6 +769,32 @@ final class AppEnvironment {
         )
     }
 
+    // MARK: - Export
+
+    /// All conversations as selectable wizard items (all-selected by default in
+    /// the UI). Mirrors `ChatImportPreview.Item`'s shape.
+    func exportPreview() -> ChatExportPreview {
+        let items = conversations.enumerated().map { offset, c in
+            ChatExportPreview.Item(index: offset, id: c.id, title: c.title,
+                                   messageCount: c.messages.count, updatedAt: c.updatedAt)
+        }
+        return ChatExportPreview(items: items)
+    }
+
+    /// Build an export bundle for the given conversation ids in the chosen
+    /// format. The caller (sidebar) writes the bytes via `.fileExporter`.
+    func buildExport(conversationIDs: [ConversationID], format: ChatExportFormat) throws -> ChatExportBundle {
+        // Preserve sidebar order.
+        let chosen = conversations.filter { conversationIDs.contains($0.id) }
+        return try ChatExporter.export(chosen, as: format)
+    }
+
+    /// Convenience for the context-menu single-chat export.
+    func buildExport(single id: ConversationID, format: ChatExportFormat) throws -> ChatExportBundle {
+        guard let c = conversation(id) else { throw ChatExportError.nothingSelected }
+        return try ChatExporter.export([c], as: format)
+    }
+
     func conversation(_ id: ConversationID) -> Conversation? {
         conversations.first(where: { $0.id == id })
     }
@@ -880,4 +914,18 @@ struct ChatImportSummary: Sendable {
     let conversationCount: Int
     let messageCount: Int
     let warnings: [String]
+}
+
+/// Conversations the user can pick from in the export wizard. Mirrors
+/// `ChatImportPreview` but references live conversations by id (nothing is
+/// parsed — these already exist).
+struct ChatExportPreview: Sendable {
+    struct Item: Identifiable, Sendable {
+        let index: Int
+        let id: ConversationID
+        let title: String
+        let messageCount: Int
+        let updatedAt: Date
+    }
+    let items: [Item]
 }
