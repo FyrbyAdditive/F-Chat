@@ -23,10 +23,11 @@ struct StreamResilienceTests {
         data: [DONE]
 
         """
-        let session = StreamStub.session(body: body)
+        let url = StreamStub.uniqueURL()
+        let session = StreamStub.session(url: url, body: body)
         let stream = streamSSE(
             session: session,
-            makeRequest: { URLRequest(url: StreamStub.url) },
+            makeRequest: { URLRequest(url: url) },
             makeDecode: {
                 { sse in
                     let d = sse.data
@@ -47,10 +48,11 @@ struct StreamResilienceTests {
 
     @Test func allUndecodableSurfacesResponseError() async throws {
         let body = "data: BOOM\n\ndata: [DONE]\n\n"
-        let session = StreamStub.session(body: body)
+        let url = StreamStub.uniqueURL()
+        let session = StreamStub.session(url: url, body: body)
         let stream = streamSSE(
             session: session,
-            makeRequest: { URLRequest(url: StreamStub.url) },
+            makeRequest: { URLRequest(url: url) },
             makeDecode: { { _ in throw StreamStubError.boom } },
             isDone: { $0.data == "[DONE]" }
         )
@@ -65,25 +67,38 @@ struct StreamResilienceTests {
 private enum StreamStubError: Error { case boom }
 
 private final class StreamStub: URLProtocol, @unchecked Sendable {
-    nonisolated(unsafe) static var body: String = ""
-    static let url = URL(string: "https://stream.stub.test/v1")!
+    // Bodies keyed by URL behind a lock so parallel tests (each with its own
+    // unique URL) never race on shared mutable state.
+    nonisolated(unsafe) private static var bodies: [URL: String] = [:]
+    private static let lock = NSLock()
 
-    static func session(body: String) -> URLSession {
-        StreamStub.body = body
+    static func uniqueURL() -> URL { URL(string: "https://stream.stub.test/\(UUID().uuidString)")! }
+
+    static func session(url: URL, body: String) -> URLSession {
+        lock.lock(); bodies[url] = body; lock.unlock()
         let config = URLSessionConfiguration.ephemeral
         config.protocolClasses = [StreamStub.self]
         return URLSession(configuration: config)
     }
 
-    override class func canInit(with request: URLRequest) -> Bool { request.url == url }
-    override class func canInit(with task: URLSessionTask) -> Bool { task.currentRequest?.url == url }
+    private static func body(for url: URL?) -> String? {
+        guard let url else { return nil }
+        lock.lock(); defer { lock.unlock() }
+        return bodies[url]
+    }
+
+    override class func canInit(with request: URLRequest) -> Bool { body(for: request.url) != nil }
+    override class func canInit(with task: URLSessionTask) -> Bool { body(for: task.currentRequest?.url) != nil }
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
     override func startLoading() {
-        let resp = HTTPURLResponse(url: Self.url, statusCode: 200, httpVersion: "HTTP/1.1",
+        guard let url = request.url, let body = Self.body(for: url) else {
+            client?.urlProtocolDidFinishLoading(self); return
+        }
+        let resp = HTTPURLResponse(url: url, statusCode: 200, httpVersion: "HTTP/1.1",
                                    headerFields: ["Content-Type": "text/event-stream"])!
         client?.urlProtocol(self, didReceive: resp, cacheStoragePolicy: .notAllowed)
-        client?.urlProtocol(self, didLoad: Data(Self.body.utf8))
+        client?.urlProtocol(self, didLoad: Data(body.utf8))
         client?.urlProtocolDidFinishLoading(self)
     }
 
