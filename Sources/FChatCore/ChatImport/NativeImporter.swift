@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Tim Ellis / Fyrby Additive Manufacturing & Engineering
+
 import Foundation
 
 /// Re-imports F-Chat's own native JSON export (an array of `Conversation`

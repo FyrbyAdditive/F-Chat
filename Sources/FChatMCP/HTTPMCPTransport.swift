@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Tim Ellis / Fyrby Additive Manufacturing & Engineering
+
 import Foundation
 
 /// Streamable HTTP MCP transport (MCP 2025-11-25 spec, without OAuth).

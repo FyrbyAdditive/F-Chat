@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Tim Ellis / Fyrby Additive Manufacturing & Engineering
+
 import SwiftUI
 import FChatCore
 #if canImport(AppKit)
@@ -740,6 +743,8 @@ private struct OptionalIntRow: View {
 }
 
 private struct AboutTab: View {
+    @State private var showAcknowledgements = false
+
     var body: some View {
         VStack(spacing: 0) {
             // F-Chat logo + name/version/description, vertically centered in
@@ -760,6 +765,24 @@ private struct AboutTab: View {
                 Text("Native macOS LLM chat client.")
                     .foregroundStyle(.secondary)
 
+                // Licensing: F-Chat is GPLv3; third-party components are credited
+                // in the acknowledgements sheet (bundled from Acknowledgements.md).
+                // The source link satisfies GPLv3 §6 for the distributed binary —
+                // recipients can get the corresponding source.
+                VStack(spacing: 4) {
+                    Text("Free software under the GNU GPL v3.0.")
+                        .foregroundStyle(.secondary)
+                    HStack(spacing: 10) {
+                        if let source = URL(string: "https://github.com/FyrbyAdditive/F-Chat") {
+                            Link("Source code", destination: source)
+                        }
+                        Button("Open-source licenses") { showAcknowledgements = true }
+                            .buttonStyle(.link)
+                    }
+                }
+                .font(.callout)
+                .padding(.top, 4)
+
                 // Company wordmark just above the copyright line.
                 Self.bundledImage(named: "FameLogo", fallbackSymbol: "building.2")
                     .resizable()
@@ -777,6 +800,9 @@ private struct AboutTab: View {
         }
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .sheet(isPresented: $showAcknowledgements) {
+            AcknowledgementsSheet(isPresented: $showAcknowledgements)
+        }
     }
 
     /// Load a PNG from the FChatApp SPM resource bundle as an NSImage.
@@ -791,5 +817,39 @@ private struct AboutTab: View {
         }
         #endif
         return Image(systemName: fallbackSymbol)
+    }
+}
+
+/// Scrollable third-party license list, loaded from the bundled
+/// `Acknowledgements.md` so the shipped binary carries its own attribution
+/// (Apache-2.0/MIT require the notices travel with the distribution).
+private struct AcknowledgementsSheet: View {
+    @Binding var isPresented: Bool
+
+    private var text: String {
+        guard let url = Bundle.module.url(forResource: "Acknowledgements", withExtension: "md"),
+              let s = try? String(contentsOf: url, encoding: .utf8)
+        else { return "Acknowledgements unavailable." }
+        return s
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Open-source licenses").font(.title3.bold())
+            ScrollView {
+                Text(text)
+                    .font(.callout.monospaced())
+                    .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .frame(minHeight: 360)
+            HStack {
+                Spacer()
+                Button("Done") { isPresented = false }
+                    .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(20)
+        .frame(width: 560, height: 520)
     }
 }

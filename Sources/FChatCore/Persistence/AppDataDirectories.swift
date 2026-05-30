@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Tim Ellis / Fyrby Additive Manufacturing & Engineering
+
 import Foundation
 
 /// Single source of truth for F-Chat's on-disk locations under the user's
