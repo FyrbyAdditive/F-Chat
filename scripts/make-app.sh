@@ -204,5 +204,39 @@ else
     echo "         Set FCHAT_CODESIGN_IDENTITY to a valid identity, or '-' for ad-hoc." >&2
 fi
 
+# --- Notarization (opt-in) --------------------------------------------------
+# Submit the signed app to Apple's notary service and staple the ticket, so
+# other Macs run it without a Gatekeeper warning. Off by default (it needs the
+# network + Apple credentials and takes a minute); enable with FCHAT_NOTARIZE=1.
+#
+# One-time credential setup (stores an App Store Connect API key in the login
+# keychain under the profile name below):
+#   xcrun notarytool store-credentials FChat \
+#       --key /path/to/AuthKey_XXXX.p8 --key-id <KEY_ID> --issuer <ISSUER_UUID>
+# (Or use --apple-id/--team-id/--password with an app-specific password.)
+# Override the profile name with FCHAT_NOTARY_PROFILE.
+if [[ "${FCHAT_NOTARIZE:-0}" == "1" ]]; then
+    NOTARY_PROFILE="${FCHAT_NOTARY_PROFILE:-FChat}"
+    ZIP="$ROOT/build/F-Chat.zip"
+    echo "==> notarize (profile: $NOTARY_PROFILE)"
+    # notarytool needs a zip (or dmg/pkg); ditto preserves the bundle + signature.
+    rm -f "$ZIP"
+    /usr/bin/ditto -c -k --keepParent "$APP_DIR" "$ZIP"
+    if xcrun notarytool submit "$ZIP" --keychain-profile "$NOTARY_PROFILE" --wait; then
+        echo "==> staple ticket"
+        xcrun stapler staple "$APP_DIR" \
+            || { echo "error: stapler failed" >&2; exit 1; }
+        # Gatekeeper should now accept it for execution.
+        spctl -a -vvv -t exec "$APP_DIR" 2>&1 | head -3 || true
+        rm -f "$ZIP"
+        echo "==> notarized + stapled"
+    else
+        echo "error: notarization failed. Inspect the log with:" >&2
+        echo "  xcrun notarytool log <submission-id> --keychain-profile $NOTARY_PROFILE" >&2
+        echo "  (run 'xcrun notarytool history --keychain-profile $NOTARY_PROFILE' for the id)" >&2
+        exit 1
+    fi
+fi
+
 echo "==> built $APP_DIR"
 echo "    open $APP_DIR    # to launch"
