@@ -13,6 +13,12 @@ struct SidebarView: View {
     @State private var renamingID: ConversationID?
     @State private var renameDraft: String = ""
     @FocusState private var renameFieldFocus: ConversationID?
+    /// Chat-import (ChatGPT/Claude) flow: file picker → parsed preview shown in
+    /// the wizard sheet → committed-summary / error alert.
+    @State private var showChatImporter = false
+    @State private var importPreview: ChatImportPreview?
+    @State private var importResult: ChatImportSummary?
+    @State private var importError: String?
 
     var body: some View {
         // The conversations list scrolls on its own; Collections + Settings are
@@ -61,11 +67,51 @@ struct SidebarView: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {
+                    showChatImporter = true
+                } label: {
+                    Label("Import chats", systemImage: "square.and.arrow.down")
+                }
+                .help("Import conversations exported from ChatGPT or Claude")
+            }
+            ToolbarItem(placement: .primaryAction) {
+                Button {
                     environment.newConversation(title: "New chat")
                 } label: {
                     Label("New chat", systemImage: "plus")
                 }
                 .keyboardShortcut("n", modifiers: [.command])
+            }
+        }
+        .fileImporter(
+            isPresented: $showChatImporter,
+            allowedContentTypes: [.json, .zip],
+            allowsMultipleSelection: false
+        ) { result in
+            handleChatImport(result)
+        }
+        .sheet(isPresented: Binding(
+            get: { importPreview != nil },
+            set: { if !$0 { importPreview = nil } }
+        )) {
+            if let preview = importPreview {
+                ImportChatsSheet(
+                    environment: environment,
+                    preview: preview,
+                    isPresented: Binding(
+                        get: { importPreview != nil },
+                        set: { if !$0 { importPreview = nil } }
+                    ),
+                    onCommit: { importResult = $0 }
+                )
+            }
+        }
+        .alert("Import chats", isPresented: importAlertPresented) {
+            Button("OK", role: .cancel) { importResult = nil; importError = nil }
+        } message: {
+            if let importError {
+                Text(importError)
+            } else if let importResult {
+                Text(importSummaryMessage(importResult))
             }
         }
         .confirmationDialog(
@@ -204,6 +250,40 @@ struct SidebarView: View {
                 Label("Delete", systemImage: "trash")
             }
         }
+    }
+
+    // MARK: - Chat import
+
+    private var importAlertPresented: Binding<Bool> {
+        Binding(
+            get: { importResult != nil || importError != nil },
+            set: { if !$0 { importResult = nil; importError = nil } }
+        )
+    }
+
+    private func handleChatImport(_ result: Result<[URL], Error>) {
+        importResult = nil
+        importError = nil
+        importPreview = nil
+        do {
+            guard let url = try result.get().first else { return }
+            let scoped = url.startAccessingSecurityScopedResource()
+            defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+            // Phase 1: parse to a preview, then present the selection wizard.
+            importPreview = try environment.prepareImport(from: url)
+        } catch {
+            importError = (error as? CustomStringConvertible)?.description ?? error.localizedDescription
+        }
+    }
+
+    private func importSummaryMessage(_ s: ChatImportSummary) -> String {
+        var msg = String(
+            localized: "Imported \(s.conversationCount) conversation(s) (\(s.messageCount) messages) from \(s.format.rawValue)."
+        )
+        if !s.warnings.isEmpty {
+            msg += "\n\n" + s.warnings.joined(separator: "\n")
+        }
+        return msg
     }
 
     private func beginRename(_ conversation: Conversation) {

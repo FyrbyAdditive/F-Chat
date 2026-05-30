@@ -46,7 +46,11 @@ struct ChatDetailView: View {
                     }
                 }
             } else {
-                ProgressView()
+                // No view model means this conversation no longer exists (e.g.
+                // it was just deleted and the detail pane is rendering a stale
+                // id for a frame). Show the empty placeholder — NOT a spinner,
+                // which misleadingly reads as "loading".
+                EmptyPlaceholderView()
             }
         }
         // Sidebar rename writes directly into environment.conversations[i],

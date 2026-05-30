@@ -57,3 +57,4 @@ coverage/
 
 # Claude Code session artifacts
 .claude/
+/sample-exports/

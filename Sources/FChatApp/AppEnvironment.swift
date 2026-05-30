@@ -675,6 +675,83 @@ final class AppEnvironment {
         }
     }
 
+    // MARK: - Import
+
+    /// Phase 1 of import: parse an export file (ChatGPT/Claude `.zip` or raw
+    /// `conversations.json`) into a previewable selection. Does NOT add anything
+    /// — the import wizard shows these so the user can cherry-pick which chats
+    /// to bring in (a Claude export is the user's entire history). Throws
+    /// `ChatImportError` on unreadable/empty/unrecognised input.
+    func prepareImport(from url: URL) throws -> ChatImportPreview {
+        let result = try ChatImporter.parse(fileURL: url)
+        guard currentProvider() != nil else {
+            // No provider to attach imported chats to — surface clearly.
+            throw ChatImportError.unrecognizedFormat
+        }
+        let items = result.chats.enumerated().map { ChatImportPreview.Item(index: $0.offset, chat: $0.element) }
+        return ChatImportPreview(format: result.format, items: items, warnings: result.warnings)
+    }
+
+    /// Phase 2 of import: commit the chosen subset of a previously prepared
+    /// preview as native conversations. Each is assigned the current active
+    /// provider (exported model name when present); per-message timestamps are
+    /// preserved. Inserted at the top; persistence fires via the `conversations`
+    /// didSet.
+    @discardableResult
+    func commitImport(_ preview: ChatImportPreview, selecting selectedIndices: Set<Int>) -> ChatImportSummary {
+        guard let provider = currentProvider() else {
+            return ChatImportSummary(format: preview.format, conversationCount: 0, messageCount: 0, warnings: preview.warnings)
+        }
+        let fallbackModel = provider.defaultModel
+            ?? detectedModels[provider.id]?.first?.id
+            ?? ""
+
+        let chosen = preview.items.filter { selectedIndices.contains($0.index) }.map(\.chat)
+        var created: [Conversation] = []
+        var messageCount = 0
+        for chat in chosen {
+            let settings = ChatSettings(
+                model: (chat.model?.isEmpty == false ? chat.model! : fallbackModel),
+                providerID: provider.id
+            )
+            let messages: [Message] = chat.messages.map { m in
+                var items: [MessageContent] = []
+                if let reasoning = m.reasoning, !reasoning.isEmpty {
+                    items.append(.reasoningSummary(reasoning))
+                }
+                if !m.text.isEmpty {
+                    items.append(.text(m.text))
+                }
+                return Message(
+                    role: m.role == .user ? .user : .assistant,
+                    contentItems: items,
+                    createdAt: m.createdAt
+                )
+            }
+            messageCount += messages.count
+            created.append(Conversation(
+                title: chat.title,
+                createdAt: chat.createdAt,
+                updatedAt: chat.updatedAt,
+                settings: settings,
+                messages: messages
+            ))
+        }
+
+        // Insert newest export first, preserving the export's own ordering.
+        conversations.insert(contentsOf: created, at: 0)
+        if let first = created.first {
+            selectedConversationID = first.id
+            sidebarSelection = .conversation(first.id)
+        }
+        return ChatImportSummary(
+            format: preview.format,
+            conversationCount: created.count,
+            messageCount: messageCount,
+            warnings: preview.warnings
+        )
+    }
+
     func conversation(_ id: ConversationID) -> Conversation? {
         conversations.first(where: { $0.id == id })
     }
@@ -704,9 +781,14 @@ final class AppEnvironment {
         // view model before dropping the underlying conversation.
         chatViewModels[id]?.cancel()
         chatViewModels.removeValue(forKey: id)
-        let wasSelected = (selectedConversationID == id)
+        // The detail pane renders whatever `sidebarSelection` points at (the
+        // List's selection binding drives that, NOT `selectedConversationID`),
+        // so we must move selection off this chat when it's the one on screen —
+        // otherwise the detail keeps rendering a now-deleted id and shows a
+        // stray spinner. Check both fields so it works however selection was set.
+        let wasShowing = sidebarSelection == .conversation(id) || selectedConversationID == id
         conversations.removeAll { $0.id == id }
-        if wasSelected {
+        if wasShowing {
             // Select the next nearest conversation, or land on the empty placeholder.
             if let next = conversations.first {
                 selectedConversationID = next.id
@@ -764,4 +846,29 @@ enum SidebarSelection: Hashable {
 /// stock AppKit about panel.
 enum SettingsTab: Hashable {
     case providers, agents, tools, skills, mcp, about
+}
+
+/// Parsed-but-not-yet-imported chats, shown in the import wizard so the user
+/// can cherry-pick which to bring in. `Item.index` is a stable selection key.
+struct ChatImportPreview: Sendable {
+    struct Item: Identifiable, Sendable {
+        let index: Int
+        let chat: ImportedChat
+        var id: Int { index }
+        var title: String { chat.title }
+        var messageCount: Int { chat.messages.count }
+        var updatedAt: Date { chat.updatedAt }
+    }
+    let format: ChatImportFormat
+    let items: [Item]
+    let warnings: [String]
+}
+
+/// UI-facing outcome of a committed import, surfaced as a confirmation in the
+/// sidebar.
+struct ChatImportSummary: Sendable {
+    let format: ChatImportFormat
+    let conversationCount: Int
+    let messageCount: Int
+    let warnings: [String]
 }
