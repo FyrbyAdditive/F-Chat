@@ -126,6 +126,7 @@ cat >"$APP_DIR/Contents/Info.plist" <<'PLIST'
     <array>
         <string>en</string>
         <string>sv</string>
+        <string>da</string>
     </array>
     <key>CFBundleName</key>
     <string>F-Chat</string>

@@ -2,14 +2,18 @@ import Testing
 import Foundation
 
 /// Structural guard for the FChatApp Localizable.xcstrings catalog: every
-/// key must carry both `en` and `sv` localizations in `translated` state.
+/// key must carry `en`, `sv`, and `da` localizations in `translated` state.
 /// Catches the easy regression where a new key gets added but only the
-/// source-language side gets filled in (which would mean the sv user sees
+/// source-language side gets filled in (which would mean a sv/da user sees
 /// English fallback text). This is not a content-quality check — that's
 /// the manual verification walk.
 @Suite("Localization coverage")
 struct LocalizationCoverageTests {
-    @Test func everyKeyHasEnglishAndSwedish() throws {
+    /// Languages the app ships UI for. Every catalog key must localize all of
+    /// these in `translated` state.
+    private let requiredLanguages = ["en", "sv", "da"]
+
+    @Test func everyKeyHasAllLocalizations() throws {
         let url = catalogURL()
         let data = try Data(contentsOf: url)
         guard let root = try JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -37,13 +41,9 @@ struct LocalizationCoverageTests {
         // Source language declared at top of file should be "en".
         #expect((root["sourceLanguage"] as? String) == "en")
 
-        var failures = 0
         for (key, entry) in strings {
-            let before = failures
-            assertTranslated(key, "en", entry)
-            assertTranslated(key, "sv", entry)
-            if failures > before {
-                // Already issue-recorded; keep going so the user sees every offender.
+            for lang in requiredLanguages {
+                assertTranslated(key, lang, entry)
             }
         }
 

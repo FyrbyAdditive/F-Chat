@@ -16,6 +16,12 @@
             "state": "translated",
             "value": "%@ · %@"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · %@"
+          }
         }
       }
     },
@@ -32,6 +38,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ · %@ · %lld delar"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · %@ · %lld dele"
           }
         }
       }
@@ -50,6 +62,12 @@
             "state": "translated",
             "value": "%lld chattar återgår till standardagenten."
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld chats falder tilbage til standardagenten."
+          }
         }
       }
     },
@@ -63,6 +81,12 @@
           }
         },
         "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld modeller · %@"
+          }
+        },
+        "da": {
           "stringUnit": {
             "state": "translated",
             "value": "%lld modeller · %@"
@@ -84,6 +108,12 @@
             "state": "translated",
             "value": "API-nyckel"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API-nøgle"
+          }
         }
       }
     },
@@ -97,6 +127,12 @@
           }
         },
         "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API-token"
+          }
+        },
+        "da": {
           "stringUnit": {
             "state": "translated",
             "value": "API-token"
@@ -118,6 +154,12 @@
             "state": "translated",
             "value": "API-token (Basic, e-post + token)"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API-token (Basic, e-mail + token)"
+          }
         }
       }
     },
@@ -131,6 +173,12 @@
           }
         },
         "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API-token (Bearer)"
+          }
+        },
+        "da": {
           "stringUnit": {
             "state": "translated",
             "value": "API-token (Bearer)"
@@ -152,6 +200,12 @@
             "state": "translated",
             "value": "Om"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Om"
+          }
         }
       }
     },
@@ -168,6 +222,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Aktiv leverantör"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktiv udbyder"
           }
         }
       }
@@ -186,6 +246,12 @@
             "state": "translated",
             "value": "Lägg till"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tilføj"
+          }
         }
       }
     },
@@ -202,6 +268,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Lägg till MCP-server"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tilføj MCP-server"
           }
         }
       }
@@ -220,6 +292,12 @@
             "state": "translated",
             "value": "Lägg till agent"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tilføj agent"
+          }
         }
       }
     },
@@ -236,6 +314,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Lägg till leverantör"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tilføj udbyder"
           }
         }
       }
@@ -254,6 +338,12 @@
             "state": "translated",
             "value": "Lägg till server"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tilføj server"
+          }
         }
       }
     },
@@ -271,6 +361,12 @@
             "state": "translated",
             "value": "Lägg till stdio MCP-servrar här. HTTP-transport kommer i ett senare steg."
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tilføj stdio-MCP-servere her. HTTP-transport kommer i en opfølgning."
+          }
         }
       }
     },
@@ -284,6 +380,12 @@
           }
         },
         "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Agent"
+          }
+        },
+        "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Agent"
@@ -305,6 +407,12 @@
             "state": "translated",
             "value": "Agentnamn"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Agentnavn"
+          }
         }
       }
     },
@@ -318,6 +426,12 @@
           }
         },
         "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Agenter"
+          }
+        },
+        "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Agenter"
@@ -339,6 +453,12 @@
             "state": "translated",
             "value": "Alla dokument och inbäddningar i denna samling tas bort permanent."
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle dokumenter og indlejringer i denne samling fjernes permanent."
+          }
         }
       }
     },
@@ -355,6 +475,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Argument"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Argumenter"
           }
         }
       }
@@ -373,6 +499,12 @@
             "state": "translated",
             "value": "Argument (kommaseparerade)"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Argumenter (kommaseparerede)"
+          }
         }
       }
     },
@@ -389,6 +521,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Autentisering"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Godkendelse"
           }
         }
       }
@@ -407,6 +545,12 @@
             "state": "translated",
             "value": "Auktoriseringsserver (valfritt)"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Godkendelsesserver (valgfrit)"
+          }
         }
       }
     },
@@ -423,6 +567,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Väntar på resultat…"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afventer resultat…"
           }
         }
       }
@@ -441,6 +591,12 @@
             "state": "translated",
             "value": "Bas-URL"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Basis-URL"
+          }
         }
       }
     },
@@ -457,6 +613,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Inbyggd agent — kan inte raderas eller döpas om."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indbygget agent — kan ikke slettes eller omdøbes."
           }
         }
       }
@@ -475,6 +637,12 @@
             "state": "translated",
             "value": "Inbyggda verktyg"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indbyggede værktøjer"
+          }
         }
       }
     },
@@ -491,6 +659,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Inbyggd. Använder F-Chats lokaliserade standardinledning."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indbygget. Bruger F-Chats lokaliserede standardindledning."
           }
         }
       }
@@ -509,6 +683,12 @@
             "state": "translated",
             "value": "Avbryt"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Annullér"
+          }
         }
       }
     },
@@ -525,6 +705,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Diagramspecifikationen kunde inte tolkas"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diagramspecifikationen kunne ikke fortolkes"
           }
         }
       }
@@ -543,6 +729,12 @@
             "state": "translated",
             "value": "Chattnamn"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chatnavn"
+          }
         }
       }
     },
@@ -559,6 +751,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kontrollerar…"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kontrollerer…"
           }
         }
       }
@@ -577,6 +775,12 @@
             "state": "translated",
             "value": "Välj filer eller mapp…"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vælg filer eller mappe…"
+          }
         }
       }
     },
@@ -593,6 +797,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Rensa klara"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ryd færdige"
           }
         }
       }
@@ -611,6 +821,12 @@
             "state": "translated",
             "value": "Klient-ID (valfritt)"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klient-ID (valgfrit)"
+          }
         }
       }
     },
@@ -627,6 +843,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Samlingsnamn"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Samlingsnavn"
           }
         }
       }
@@ -645,6 +867,12 @@
             "state": "translated",
             "value": "Samlingar"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Samlinger"
+          }
         }
       }
     },
@@ -662,6 +890,12 @@
             "state": "translated",
             "value": "Kommer snart — hantera dina lokala dokumentsamlingar här."
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kommer snart — administrér dine lokale dokumentsamlinger her."
+          }
         }
       }
     },
@@ -675,6 +909,12 @@
           }
         },
         "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kommando"
+          }
+        },
+        "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Kommando"
@@ -696,6 +936,12 @@
             "state": "translated",
             "value": "Kommando (t.ex. npx)"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kommando (f.eks. npx)"
+          }
         }
       }
     },
@@ -712,6 +958,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Komprimera nu"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Komprimér nu"
           }
         }
       }
@@ -730,6 +982,12 @@
             "state": "translated",
             "value": "Komprimerar kontext…"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Komprimerer kontekst…"
+          }
         }
       }
     },
@@ -746,6 +1004,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ansluter…"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opretter forbindelse…"
           }
         }
       }
@@ -764,6 +1028,12 @@
             "state": "translated",
             "value": "Kontextanvändning"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kontekstforbrug"
+          }
         }
       }
     },
@@ -780,6 +1050,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kontextfönster"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kontekstvindue"
           }
         }
       }
@@ -798,6 +1074,12 @@
             "state": "translated",
             "value": "Konversation"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Samtale"
+          }
         }
       }
     },
@@ -814,6 +1096,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Konversationssammanfattning hittills: %@"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Samtaleresumé indtil videre: %@"
           }
         }
       }
@@ -832,6 +1120,12 @@
             "state": "translated",
             "value": "Konversationer"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Samtaler"
+          }
         }
       }
     },
@@ -848,6 +1142,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Skapa"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opret"
           }
         }
       }
@@ -866,6 +1166,12 @@
             "state": "translated",
             "value": "Skapad"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oprettet"
+          }
         }
       }
     },
@@ -882,6 +1188,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Aktuell tid"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktuelt klokkeslæt"
           }
         }
       }
@@ -900,6 +1212,12 @@
             "state": "translated",
             "value": "Just nu %@. Klicka på Testa anslutning för att hitta modeller."
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktuelt %@. Klik på Test forbindelse for at finde modeller."
+          }
         }
       }
     },
@@ -913,6 +1231,12 @@
           }
         },
         "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Standard"
+          }
+        },
+        "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Standard"
@@ -934,6 +1258,12 @@
             "state": "translated",
             "value": "Standardagent för nya chattar"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Standardagent for nye chats"
+          }
         }
       }
     },
@@ -950,6 +1280,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Standardmodell"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Standardmodel"
           }
         }
       }
@@ -968,6 +1304,12 @@
             "state": "translated",
             "value": "Radera"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Slet"
+          }
         }
       }
     },
@@ -984,6 +1326,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Radera agent"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Slet agent"
           }
         }
       }
@@ -1002,6 +1350,12 @@
             "state": "translated",
             "value": "Radera agenten \"%@\"?"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Slet agenten \"%@\"?"
+          }
         }
       }
     },
@@ -1018,6 +1372,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Radera server"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Slet server"
           }
         }
       }
@@ -1036,6 +1396,12 @@
             "state": "translated",
             "value": "Radera servern \"%@\"?"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Slet serveren \"%@\"?"
+          }
         }
       }
     },
@@ -1052,6 +1418,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Inaktiverade verktyg presenteras inte för modellen och kan inte anropas."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deaktiverede værktøjer præsenteres ikke for modellen og kan ikke kaldes."
           }
         }
       }
@@ -1070,6 +1442,12 @@
             "state": "translated",
             "value": "Frånkopplad"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afbrudt"
+          }
         }
       }
     },
@@ -1086,6 +1464,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Visningsnamn"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Visningsnavn"
           }
         }
       }
@@ -1104,6 +1488,12 @@
             "state": "translated",
             "value": "Dokument bäddas in lokalt på enheten. Ingen nätverksåtkomst krävs."
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dokumenter indlejres lokalt på enheden. Ingen netværksadgang kræves."
+          }
         }
       }
     },
@@ -1120,6 +1510,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Dokument i denna chatt"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dokumenter i denne chat"
           }
         }
       }
@@ -1138,6 +1534,12 @@
             "state": "translated",
             "value": "Släpp filer ovan, eller använd filväljaren."
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Slip filer ovenfor, eller brug filvælgeren."
+          }
         }
       }
     },
@@ -1154,6 +1556,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Släpp filer eller mappar här"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Slip filer eller mapper her"
           }
         }
       }
@@ -1172,6 +1580,12 @@
             "state": "translated",
             "value": "Verktygen från varje aktiverad server är tillgängliga i alla chattar. Servrar ansluter vid första användning denna session."
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Værktøjerne fra hver aktiveret server er tilgængelige i alle chats. Servere opretter forbindelse ved første brug i denne session."
+          }
         }
       }
     },
@@ -1188,6 +1602,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "E-post"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "E-mail"
           }
         }
       }
@@ -1206,6 +1626,12 @@
             "state": "translated",
             "value": "Ange en fullständig URL inklusive schema."
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Angiv en fuldstændig URL inklusive skema."
+          }
         }
       }
     },
@@ -1223,6 +1649,12 @@
             "state": "translated",
             "value": "Miljövariabler"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Miljøvariabler"
+          }
         }
       }
     },
@@ -1236,6 +1668,12 @@
           }
         },
         "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "F-Chat"
+          }
+        },
+        "da": {
           "stringUnit": {
             "state": "translated",
             "value": "F-Chat"
@@ -1257,6 +1695,12 @@
             "state": "translated",
             "value": "Hämta en URL och extrahera huvudtexten med WKWebView + Mozilla Readability."
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hent en URL og udtræk den primære læsbare tekst med WKWebView + Mozilla Readability."
+          }
         }
       }
     },
@@ -1270,6 +1714,12 @@
           }
         },
         "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HTTP"
+          }
+        },
+        "da": {
           "stringUnit": {
             "state": "translated",
             "value": "HTTP"
@@ -1291,6 +1741,12 @@
             "state": "translated",
             "value": "Hård gräns (tokens)"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hård grænse (tokens)"
+          }
         }
       }
     },
@@ -1308,6 +1764,12 @@
             "state": "translated",
             "value": "Headers"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Headere"
+          }
         }
       }
     },
@@ -1321,6 +1783,12 @@
           }
         },
         "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ID"
+          }
+        },
+        "da": {
           "stringUnit": {
             "state": "translated",
             "value": "ID"
@@ -1342,6 +1810,12 @@
             "state": "translated",
             "value": "Inspektor"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inspektør"
+          }
         }
       }
     },
@@ -1358,6 +1832,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Dess verktyg kommer inte längre vara tillgängliga i någon chatt förrän du lägger till den igen."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dens værktøjer vil ikke længere være tilgængelige i nogen chat, før du tilføjer den igen."
           }
         }
       }
@@ -1376,6 +1856,12 @@
             "state": "translated",
             "value": "Behåll senaste meddelanden ordagrant"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Behold seneste beskeder ordret"
+          }
         }
       }
     },
@@ -1392,6 +1878,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Låter modellen hämta exakt aktuell tid på begäran. Av som standard — datumet finns redan i varje meddelande; aktivera bara när precision under en dag spelar roll."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lader modellen hente det præcise aktuelle klokkeslæt efter behov. Slået fra som standard — datoen findes allerede i hver besked; aktivér kun, når præcision på under en dag har betydning."
           }
         }
       }
@@ -1410,6 +1902,12 @@
             "state": "translated",
             "value": "Låter modellen rita ett stapel-, linje- eller cirkeldiagram direkt i chatten. Av som standard; aktivera när du vill ha visuella datapresentationer."
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lader modellen tegne et søjle-, linje- eller cirkeldiagram direkte i chatten. Slået fra som standard; aktivér, når du vil have visuelle datavisninger."
+          }
         }
       }
     },
@@ -1427,6 +1925,12 @@
             "state": "translated",
             "value": "Läser in modell…"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indlæser model…"
+          }
         }
       }
     },
@@ -1440,6 +1944,12 @@
           }
         },
         "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MCP"
+          }
+        },
+        "da": {
           "stringUnit": {
             "state": "translated",
             "value": "MCP"
@@ -1461,6 +1971,12 @@
             "state": "translated",
             "value": "MCP-servrar"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MCP-servere"
+          }
         }
       }
     },
@@ -1477,6 +1993,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Skapa diagram"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opret diagram"
           }
         }
       }
@@ -1495,6 +2017,12 @@
             "state": "translated",
             "value": "Max utdata-tokens"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maks. output-tokens"
+          }
         }
       }
     },
@@ -1511,6 +2039,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Maximalt antal verktygsiterationer"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maks. antal værktøjsiterationer"
           }
         }
       }
@@ -1529,6 +2063,12 @@
             "state": "translated",
             "value": "Maximal vilotid mellan datapaket innan en förfrågan misslyckas. Återställs vid varje mottagen byte, så långa aktiva svar är inga problem — detta fångar bara en stillastående anslutning. Höj den om en långsam backend gör time-out mitt i ett svar."
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maksimal inaktiv tid mellem datapakker, før en anmodning mislykkes. Nulstilles ved hver modtaget byte, så lange aktive svar er ingen problem — dette fanger kun en stoppet forbindelse. Øg den, hvis en langsom backend får timeout midt i et svar."
+          }
         }
       }
     },
@@ -1545,6 +2085,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Meddelande"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Besked"
           }
         }
       }
@@ -1563,6 +2109,12 @@
             "state": "translated",
             "value": "Meddelanden"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beskeder"
+          }
         }
       }
     },
@@ -1579,6 +2131,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Modell"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Model"
           }
         }
       }
@@ -1597,6 +2155,12 @@
             "state": "translated",
             "value": "Model Context Protocol-servrar"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Model Context Protocol-servere"
+          }
         }
       }
     },
@@ -1613,6 +2177,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Namn"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Navn"
           }
         }
       }
@@ -1631,6 +2201,12 @@
             "state": "translated",
             "value": "Inbyggd LLM-chattklient för macOS."
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indbygget LLM-chatklient til macOS."
+          }
         }
       }
     },
@@ -1647,6 +2223,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nätverk"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Netværk"
           }
         }
       }
@@ -1665,6 +2247,12 @@
             "state": "translated",
             "value": "Importera chattar från fil…"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importér chats fra fil…"
+          }
         }
       }
     },
@@ -1681,6 +2269,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ny chatt"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ny chat"
           }
         }
       }
@@ -1699,6 +2293,12 @@
             "state": "translated",
             "value": "Nya chattar använder denna leverantör och dess standardmodell. Varje chatt behåller sin egen inställning; per-chatt-åsidosättningar finns i Inspektören."
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nye chats bruger denne udbyder og dens standardmodel. Hver chat beholder sin egen indstilling; tilsidesættelser pr. chat findes i Inspektøren."
+          }
         }
       }
     },
@@ -1712,6 +2312,12 @@
           }
         },
         "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ny samling"
+          }
+        },
+        "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Ny samling"
@@ -1733,6 +2339,12 @@
             "state": "translated",
             "value": "Prognos för nästa skick"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prognose for næste afsendelse"
+          }
         }
       }
     },
@@ -1749,6 +2361,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Inga MCP-servrar än"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ingen MCP-servere endnu"
           }
         }
       }
@@ -1767,6 +2385,12 @@
             "state": "translated",
             "value": "Ingen budget upptäckt. Välj en leverantör och en standardmodell i Inställningar."
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Intet budget registreret. Vælg en udbyder og en standardmodel i Indstillinger."
+          }
         }
       }
     },
@@ -1783,6 +2407,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Inga delar för detta dokument"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ingen dele for dette dokument"
           }
         }
       }
@@ -1801,6 +2431,12 @@
             "state": "translated",
             "value": "Inga samlingar än"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ingen samlinger endnu"
+          }
         }
       }
     },
@@ -1817,6 +2453,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Inga samlingar än. Skapa en i samlingspanelen."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ingen samlinger endnu. Opret en i samlingspanelet."
           }
         }
       }
@@ -1835,6 +2477,12 @@
             "state": "translated",
             "value": "Ingen standardmodell satt för leverantör %@. Öppna Inställningar → Leverantörer och välj en."
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ingen standardmodel angivet for udbyder %@. Åbn Indstillinger → Udbydere, og vælg en."
+          }
         }
       }
     },
@@ -1851,6 +2499,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Inga dokument i %@"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ingen dokumenter i %@"
           }
         }
       }
@@ -1869,6 +2523,12 @@
             "state": "translated",
             "value": "Ingen leverantör konfigurerad. Öppna Inställningar → Leverantörer."
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ingen udbyder konfigureret. Åbn Indstillinger → Udbydere."
+          }
         }
       }
     },
@@ -1882,6 +2542,12 @@
           }
         },
         "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ingen"
+          }
+        },
+        "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Ingen"
@@ -1903,6 +2569,12 @@
             "state": "translated",
             "value": "Inte testad"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ikke testet"
+          }
         }
       }
     },
@@ -1919,6 +2591,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Äldre meddelanden sammanfattas bort när den planerade förfrågan skulle lämna mindre än reserven ledig för svaret."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ældre beskeder sammenfattes væk, når den forventede anmodning ville efterlade mindre end reserven fri til svaret."
           }
         }
       }
@@ -1937,6 +2615,12 @@
             "state": "translated",
             "value": "Öppna"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Åbn"
+          }
         }
       }
     },
@@ -1953,6 +2637,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Åsidosätt"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tilsidesæt"
           }
         }
       }
@@ -1971,6 +2661,12 @@
             "state": "translated",
             "value": "PDF, .md, .txt, källkod. Mappar genomsöks rekursivt; dolda filer och format som inte stöds hoppas över."
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PDF, .md, .txt, kildekode. Mapper gennemgås rekursivt; skjulte filer og ikke-understøttede typer springes over."
+          }
         }
       }
     },
@@ -1987,6 +2683,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Parallella verktygsanrop"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parallelle værktøjskald"
           }
         }
       }
@@ -2005,6 +2707,12 @@
             "state": "translated",
             "value": "Klistra in nyckel — lagras i nyckelringen"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indsæt nøgle — gemmes i nøglering"
+          }
         }
       }
     },
@@ -2021,6 +2729,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Välj en modell i inspektorn och skriv sedan nedan."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vælg en model i inspektøren, og skriv derefter nedenfor."
           }
         }
       }
@@ -2039,6 +2753,12 @@
             "state": "translated",
             "value": "Leverantör"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Udbyder"
+          }
         }
       }
     },
@@ -2055,6 +2775,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Leverantörer"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Udbydere"
           }
         }
       }
@@ -2073,6 +2799,12 @@
             "state": "translated",
             "value": "Logga in igen"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Log ind igen"
+          }
         }
       }
     },
@@ -2089,6 +2821,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Klar · %lld verktyg"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klar · %lld værktøjer"
           }
         }
       }
@@ -2107,6 +2845,12 @@
             "state": "translated",
             "value": "Resonemang"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ræsonnement"
+          }
         }
       }
     },
@@ -2123,6 +2867,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Resoneringsnivå för denna chatt"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ræsonnementsniveau for denne chat"
           }
         }
       }
@@ -2141,6 +2891,12 @@
             "state": "translated",
             "value": "Ta bort leverantör"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fjern udbyder"
+          }
         }
       }
     },
@@ -2157,6 +2913,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ta bort sparad token"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fjern gemt token"
           }
         }
       }
@@ -2175,6 +2937,12 @@
             "state": "translated",
             "value": "Byt namn…"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Omdøb…"
+          }
         }
       }
     },
@@ -2191,6 +2959,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tidsgräns för förfrågan (sekunder)"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tidsgrænse for anmodning (sekunder)"
           }
         }
       }
@@ -2209,6 +2983,12 @@
             "state": "translated",
             "value": "Reserv för svar (tokens)"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reservér til svar (tokens)"
+          }
         }
       }
     },
@@ -2225,6 +3005,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Återställ F-Chats lokaliserade standardinledning."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gendan F-Chats lokaliserede standardindledning."
           }
         }
       }
@@ -2243,6 +3029,12 @@
             "state": "translated",
             "value": "Försök igen"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prøv igen"
+          }
         }
       }
     },
@@ -2260,6 +3052,12 @@
             "state": "translated",
             "value": "Återställ till inbyggd"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skift tilbage til indbygget"
+          }
         }
       }
     },
@@ -2273,6 +3071,12 @@
           }
         },
         "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sampling"
+          }
+        },
+        "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Sampling"
@@ -2294,6 +3098,12 @@
             "state": "translated",
             "value": "Standardvärden för sampling"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Standardværdier for sampling"
+          }
         }
       }
     },
@@ -2310,6 +3120,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Spara"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gem"
           }
         }
       }
@@ -2328,6 +3144,12 @@
             "state": "translated",
             "value": "Det gick inte att spara: %@"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kunne ikke gemme: %@"
+          }
         }
       }
     },
@@ -2344,6 +3166,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Spara nyckel i Nyckelring"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gem nøgle i Nøglering"
           }
         }
       }
@@ -2362,6 +3190,12 @@
             "state": "translated",
             "value": "Sparad i nyckelringen."
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemt i nøglering."
+          }
         }
       }
     },
@@ -2378,6 +3212,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Behörigheter (valfritt)"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tilladelser (valgfrit)"
           }
         }
       }
@@ -2396,6 +3236,12 @@
             "state": "translated",
             "value": "Sök det publika webben via DuckDuckGo. Ingen API-nyckel krävs."
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Søg på det offentlige web via DuckDuckGo. Ingen API-nøgle kræves."
+          }
         }
       }
     },
@@ -2412,6 +3258,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Välj ett dokument"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vælg et dokument"
           }
         }
       }
@@ -2430,6 +3282,12 @@
             "state": "translated",
             "value": "Välj eller skapa en samling"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vælg eller opret en samling"
+          }
         }
       }
     },
@@ -2446,6 +3304,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Välj eller starta en konversation"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vælg eller start en samtale"
           }
         }
       }
@@ -2464,6 +3328,12 @@
             "state": "translated",
             "value": "Servermax okänt — använder säkra 8 192 tills du Testar anslutningen."
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Servermaks ukendt — bruger sikre 8.192, indtil du Tester forbindelse."
+          }
         }
       }
     },
@@ -2480,6 +3350,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Inställningar"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indstillinger"
           }
         }
       }
@@ -2498,6 +3374,12 @@
             "state": "translated",
             "value": "Visar F-Chats inbyggda inledning. Redigera för att åsidosätta."
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Viser F-Chats indbyggede indledning. Redigér for at tilsidesætte."
+          }
         }
       }
     },
@@ -2514,6 +3396,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Logga in"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Log ind"
           }
         }
       }
@@ -2532,6 +3420,12 @@
             "state": "translated",
             "value": "Logga ut"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Log ud"
+          }
         }
       }
     },
@@ -2548,6 +3442,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Starta en konversation"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start en samtale"
           }
         }
       }
@@ -2566,6 +3466,12 @@
             "state": "translated",
             "value": "Stdio (delprocess)"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stdio (underproces)"
+          }
         }
       }
     },
@@ -2579,6 +3485,12 @@
           }
         },
         "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Systemprompt"
+          }
+        },
+        "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Systemprompt"
@@ -2600,6 +3512,12 @@
             "state": "translated",
             "value": "Temperatur"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Temperatur"
+          }
         }
       }
     },
@@ -2616,6 +3534,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Testa anslutning / hämta modeller"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Test forbindelse / hent modeller"
           }
         }
       }
@@ -2634,6 +3558,12 @@
             "state": "translated",
             "value": "Testa anslutning / uppdatera verktyg"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Test forbindelse / opdatér værktøjer"
+          }
         }
       }
     },
@@ -2650,6 +3580,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tänker"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tænker"
           }
         }
       }
@@ -2668,6 +3604,12 @@
             "state": "translated",
             "value": "Denna agent används inte av någon chatt."
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Denne agent bruges ikke af nogen chat."
+          }
         }
       }
     },
@@ -2684,6 +3626,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Denna konversation tas bort permanent. Detta kan inte ångras."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Denne samtale fjernes permanent. Dette kan ikke fortrydes."
           }
         }
       }
@@ -2702,6 +3650,12 @@
             "state": "translated",
             "value": "Detta väljer agenten som varje ny chatt börjar med. Enskilda chattar kan åsidosätta i Inspektören."
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dette vælger den agent, som enhver nyoprettet chat starter med. Enkelte chats kan tilsidesætte den i Inspektøren."
+          }
         }
       }
     },
@@ -2715,6 +3669,12 @@
           }
         },
         "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Titel"
+          }
+        },
+        "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Titel"
@@ -2736,6 +3696,12 @@
             "state": "translated",
             "value": "Verktygsresultat"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Værktøjsresultat"
+          }
         }
       }
     },
@@ -2752,6 +3718,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Verktygsresultat (fel)"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Værktøjsresultat (fejl)"
           }
         }
       }
@@ -2770,6 +3742,12 @@
             "state": "translated",
             "value": "Verktyg"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Værktøjer"
+          }
         }
       }
     },
@@ -2783,6 +3761,12 @@
           }
         },
         "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transport"
+          }
+        },
+        "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Transport"
@@ -2804,6 +3788,12 @@
             "state": "translated",
             "value": "Skriv nedan för att börja."
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skriv nedenfor for at begynde."
+          }
         }
       }
     },
@@ -2817,6 +3807,12 @@
           }
         },
         "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "URL"
+          }
+        },
+        "da": {
           "stringUnit": {
             "state": "translated",
             "value": "URL"
@@ -2838,6 +3834,12 @@
             "state": "translated",
             "value": "URL (t.ex. https://värd/mcp)"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "URL (f.eks. https://vært/mcp)"
+          }
         }
       }
     },
@@ -2854,6 +3856,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Namnlös agent"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Agent uden navn"
           }
         }
       }
@@ -2872,6 +3880,12 @@
             "state": "translated",
             "value": "Namnlös server"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server uden navn"
+          }
         }
       }
     },
@@ -2888,6 +3902,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Uppdaterad"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opdateret"
           }
         }
       }
@@ -2906,6 +3926,12 @@
             "state": "translated",
             "value": "Använd OAuth"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Brug OAuth"
+          }
         }
       }
     },
@@ -2922,6 +3948,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Används för varje chatt som pratar med denna leverantör."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bruges til hver chat, der taler med denne udbyder."
           }
         }
       }
@@ -2940,6 +3972,12 @@
             "state": "translated",
             "value": "Använder servermax: %@ tokens."
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bruger servermaks: %@ tokens."
+          }
         }
       }
     },
@@ -2953,6 +3991,12 @@
           }
         },
         "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version %@"
+          }
+        },
+        "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Version %@"
@@ -2974,6 +4018,12 @@
             "state": "translated",
             "value": "Hämta sida"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hent side"
+          }
         }
       }
     },
@@ -2990,6 +4040,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Hämta sida använder WKWebView + Mozilla Readability för ren extraktion."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hent side bruger WKWebView + Mozilla Readability til ren udtrækning."
           }
         }
       }
@@ -3008,6 +4064,12 @@
             "state": "translated",
             "value": "Webbsökning"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Websøgning"
+          }
         }
       }
     },
@@ -3024,6 +4086,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Webbsökning använder DuckDuckGo utan API-nyckel."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Websøgning bruger DuckDuckGo uden API-nøgle."
           }
         }
       }
@@ -3042,6 +4110,12 @@
             "state": "translated",
             "value": "Arbetskatalog"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arbejdsmappe"
+          }
         }
       }
     },
@@ -3058,6 +4132,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ditt meddelande är %@ tokens — större än denna leverantörs %@-token-fönster. Spara det som ett RAG-dokument istället (kommer snart)."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Din besked er %@ tokens — større end denne udbyders vindue på %@ tokens. Gem den som et RAG-dokument i stedet (kommer snart)."
           }
         }
       }
@@ -3076,6 +4156,12 @@
             "state": "translated",
             "value": "automatisk identifiering från MCP-server"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "find automatisk fra MCP-server"
+          }
         }
       }
     },
@@ -3093,6 +4179,12 @@
             "state": "translated",
             "value": "lämna tom för auto-registrering"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tom for automatisk registrering"
+          }
         }
       }
     },
@@ -3106,6 +4198,12 @@
           }
         },
         "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "budget"
+          }
+        },
+        "da": {
           "stringUnit": {
             "state": "translated",
             "value": "budget"
@@ -3127,6 +4225,12 @@
             "state": "translated",
             "value": "kommaseparerade"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "kommaseparerede"
+          }
         }
       }
     },
@@ -3144,6 +4248,12 @@
             "state": "translated",
             "value": "valfritt"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "valgfrit"
+          }
         }
       }
     },
@@ -3157,6 +4267,12 @@
           }
         },
         "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "s.%lld"
+          }
+        },
+        "da": {
           "stringUnit": {
             "state": "translated",
             "value": "s.%lld"
@@ -3178,6 +4294,12 @@
             "state": "translated",
             "value": "klistra in token"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "indsæt token"
+          }
         }
       }
     },
@@ -3191,6 +4313,12 @@
           }
         },
         "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "serverstandard"
+          }
+        },
+        "da": {
           "stringUnit": {
             "state": "translated",
             "value": "serverstandard"
@@ -3212,6 +4340,12 @@
             "state": "translated",
             "value": "servermax: %@"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "servermaks: %@"
+          }
         }
       }
     },
@@ -3229,6 +4363,12 @@
             "state": "translated",
             "value": "mellanslagsseparerade"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "mellemrumsseparerede"
+          }
         }
       }
     },
@@ -3242,6 +4382,12 @@
           }
         },
         "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "top_p"
+          }
+        },
+        "da": {
           "stringUnit": {
             "state": "translated",
             "value": "top_p"
@@ -3263,6 +4409,12 @@
             "state": "translated",
             "value": "du@exempel.se"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "dig@eksempel.dk"
+          }
         }
       }
     },
@@ -3279,6 +4431,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "— välj en standard —"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "— vælg en standard —"
           }
         }
       }
@@ -3297,6 +4455,12 @@
             "state": "translated",
             "value": "•••••••• (sparad i nyckelringen)"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "•••••••• (gemt i nøglering)"
+          }
         }
       }
     },
@@ -3313,6 +4477,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Färdigheter"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Færdigheder"
           }
         }
       }
@@ -3331,6 +4501,12 @@
             "state": "translated",
             "value": "Importera färdighet"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importér færdighed"
+          }
         }
       }
     },
@@ -3347,6 +4523,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Skapa färdighet"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opret færdighed"
           }
         }
       }
@@ -3365,6 +4547,12 @@
             "state": "translated",
             "value": "Beskrivning"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beskrivelse"
+          }
         }
       }
     },
@@ -3378,6 +4566,12 @@
           }
         },
         "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version"
+          }
+        },
+        "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Version"
@@ -3399,6 +4593,12 @@
             "state": "translated",
             "value": "Licens"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Licens"
+          }
         }
       }
     },
@@ -3416,6 +4616,12 @@
             "state": "translated",
             "value": "Källa"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kilde"
+          }
         }
       }
     },
@@ -3429,6 +4635,12 @@
           }
         },
         "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Instruktioner"
+          }
+        },
+        "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Instruktioner"
@@ -3450,6 +4662,12 @@
             "state": "translated",
             "value": "Importerad"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importeret"
+          }
         }
       }
     },
@@ -3466,6 +4684,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Skapad här"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oprettet her"
           }
         }
       }
@@ -3484,6 +4708,12 @@
             "state": "translated",
             "value": "Medföljande filer"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Medfølgende filer"
+          }
         }
       }
     },
@@ -3500,6 +4730,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tillämpa på alla chattar som standard"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anvend på alle chats som standard"
           }
         }
       }
@@ -3518,6 +4754,12 @@
             "state": "translated",
             "value": "Färdigheter tillgängliga i den här chatten"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Færdigheder tilgængelige i denne chat"
+          }
         }
       }
     },
@@ -3534,6 +4776,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Radera färdighet"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Slet færdighed"
           }
         }
       }
@@ -3552,6 +4800,12 @@
             "state": "translated",
             "value": "Inga färdigheter ännu. Importera ett färdighetspaket från tredje part eller skapa ett."
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ingen færdigheder endnu. Importér en færdighedspakke fra tredjepart, eller opret en."
+          }
         }
       }
     },
@@ -3568,6 +4822,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Inga färdigheter ännu. Lägg till en i Inställningar → Färdigheter."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ingen færdigheder endnu. Tilføj en i Indstillinger → Færdigheder."
           }
         }
       }
@@ -3586,6 +4846,12 @@
             "state": "translated",
             "value": "Tillämpas på alla chattar (ändra i Inställningar → Färdigheter)."
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anvendes på alle chats (ændr i Indstillinger → Færdigheder)."
+          }
         }
       }
     },
@@ -3602,6 +4868,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Färdigheter är mappar med instruktioner och skript som modellen kan använda. Importerade färdigheter körs i en sandlåda utan nätverksåtkomst. Aktivera en färdighet per chatt i inspektören, eller markera att den gäller alla chattar nedan."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Færdigheder er mapper med instruktioner og scripts, som modellen kan bruge. Importerede færdigheder kører i en sandkasse uden netværksadgang. Aktivér en færdighed pr. chat i Inspektøren, eller markér, at den gælder for alle chats nedenfor."
           }
         }
       }
@@ -3620,6 +4892,12 @@
             "state": "translated",
             "value": "gemener-med-bindestreck"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "småbogstaver-med-bindestreg"
+          }
         }
       }
     },
@@ -3636,6 +4914,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "När modellen ska använda den här färdigheten"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hvornår modellen skal bruge denne færdighed"
           }
         }
       }
@@ -3654,6 +4938,12 @@
             "state": "translated",
             "value": "Den här färdigheten är inte aktiverad i någon chatt."
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Denne færdighed er ikke aktiveret i nogen chat."
+          }
         }
       }
     },
@@ -3670,6 +4960,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Radera färdigheten ”%@”?"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Slet færdigheden \"%@\"?"
           }
         }
       }
@@ -3688,6 +4984,12 @@
             "state": "translated",
             "value": "%lld chattar använder för närvarande den här färdigheten."
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld chats bruger i øjeblikket denne færdighed."
+          }
         }
       }
     },
@@ -3704,6 +5006,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "API-typ"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API-type"
           }
         }
       }
@@ -3722,6 +5030,12 @@
             "state": "translated",
             "value": "Importera chattar"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importér chats"
+          }
         }
       }
     },
@@ -3739,6 +5053,12 @@
             "state": "translated",
             "value": "Importera konversationer exporterade från ChatGPT eller Claude"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importér samtaler eksporteret fra ChatGPT eller Claude"
+          }
         }
       }
     },
@@ -3752,6 +5072,12 @@
           }
         },
         "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        },
+        "da": {
           "stringUnit": {
             "state": "translated",
             "value": "OK"
@@ -3773,6 +5099,12 @@
             "state": "translated",
             "value": "Importerade %lld konversation(er) (%lld meddelanden) från %@."
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importerede %lld samtale(r) (%lld beskeder) fra %@."
+          }
         }
       }
     },
@@ -3789,6 +5121,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Importera från %@"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importér fra %@"
           }
         }
       }
@@ -3807,6 +5145,12 @@
             "state": "translated",
             "value": "%lld konversation(er) hittades. Välj vilka som ska importeras."
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld samtale(r) fundet. Vælg, hvilke der skal importeres."
+          }
         }
       }
     },
@@ -3823,6 +5167,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sök titlar"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Søg i titler"
           }
         }
       }
@@ -3841,6 +5191,12 @@
             "state": "translated",
             "value": "Markera alla"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Markér alle"
+          }
         }
       }
     },
@@ -3857,6 +5213,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Avmarkera alla"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fravælg alle"
           }
         }
       }
@@ -3875,6 +5237,12 @@
             "state": "translated",
             "value": "%lld av %lld markerade"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld af %lld markeret"
+          }
         }
       }
     },
@@ -3891,6 +5259,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Importera"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importér"
           }
         }
       }
@@ -3909,6 +5283,12 @@
             "state": "translated",
             "value": "%lld meddelanden · %@"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld beskeder · %@"
+          }
         }
       }
     },
@@ -3925,6 +5305,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Exportera chattar"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eksportér chats"
           }
         }
       }
@@ -3943,6 +5329,12 @@
             "state": "translated",
             "value": "Exportera chattar till fil…"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eksportér chats til fil…"
+          }
         }
       }
     },
@@ -3959,6 +5351,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Exportera konversationer till Markdown, JSON, Word eller text"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eksportér samtaler til Markdown, JSON, Word eller tekst"
           }
         }
       }
@@ -3977,6 +5375,12 @@
             "state": "translated",
             "value": "Välj vilka konversationer som ska exporteras och formatet."
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vælg, hvilke samtaler der skal eksporteres, og formatet."
+          }
         }
       }
     },
@@ -3990,6 +5394,12 @@
           }
         },
         "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Format"
+          }
+        },
+        "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Format"
@@ -4011,6 +5421,12 @@
             "state": "translated",
             "value": "Exportera"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eksportér"
+          }
         }
       }
     },
@@ -4024,6 +5440,12 @@
           }
         },
         "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Markdown"
+          }
+        },
+        "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Markdown"
@@ -4045,6 +5467,12 @@
             "state": "translated",
             "value": "JSON (kan importeras igen)"
           }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "JSON (kan importeres igen)"
+          }
         }
       }
     },
@@ -4058,6 +5486,12 @@
           }
         },
         "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Word"
+          }
+        },
+        "da": {
           "stringUnit": {
             "state": "translated",
             "value": "Word"
@@ -4078,6 +5512,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Oformaterad text"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Almindelig tekst"
           }
         }
       }
