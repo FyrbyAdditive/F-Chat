@@ -84,8 +84,8 @@ public struct ConversationSummarizer: Sendable {
                     return nil
                 case .image:
                     return "[image attached]"
-                case .attachment(let filename, _, _):
-                    return "[attachment: \(filename)]"
+                case .attachment(let ref):
+                    return "[attachment: \(ref.filename ?? "attachment")]"
                 }
             }.joined(separator: "\n")
             return "## \(role)\n\(body)"

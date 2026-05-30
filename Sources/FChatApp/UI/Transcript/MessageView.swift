@@ -158,9 +158,10 @@ struct MessageView: View {
             } else {
                 ToolCallResultBlock(call: nil, result: result)
             }
-        case .image(let data, _):
+        case .image:
 #if canImport(AppKit)
-            if let nsImage = NSImage(data: data) {
+            // Lazy: only the visible message reads its blob off disk.
+            if let data = item.imageData, let nsImage = NSImage(data: data) {
                 Image(nsImage: nsImage)
                     .resizable()
                     .scaledToFit()
@@ -168,8 +169,8 @@ struct MessageView: View {
                     .clipShape(RoundedRectangle(cornerRadius: DesignTokens.smallRadius))
             }
 #endif
-        case .attachment(let filename, _, _):
-            Label(filename, systemImage: "paperclip")
+        case .attachment(let ref):
+            Label(ref.filename ?? "attachment", systemImage: "paperclip")
                 .padding(8)
                 .background(DesignTokens.secondaryFill, in: RoundedRectangle(cornerRadius: DesignTokens.smallRadius))
         }

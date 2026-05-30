@@ -145,9 +145,10 @@ public struct RequestPayloadBuilder: Sendable {
                 }
                 items.append(.functionCallOutput(callID: rec.callID, outputJSON: rec.outputJSON))
 
-            case .image(let data, let mimeType):
-                let base64 = data.base64EncodedString()
-                textRuns.append(.inputImageData(base64: base64, mimeType: mimeType))
+            case .image(let ref):
+                if let data = item.imageData {
+                    textRuns.append(.inputImageData(base64: data.base64EncodedString(), mimeType: ref.mimeType))
+                }
 
             case .attachment:
                 // Out of band; attachments aren't supported in the OpenAI
@@ -253,11 +254,10 @@ public struct RequestPayloadBuilder: Sendable {
             case .toolResult(let rec):
                 total += tokenizer.countTokens(in: rec.outputJSON)
                 total += 4
-            case .image(let data, _):
+            case .image:
                 // Rough placeholder: low/medium-detail images use ~85 / ~170
                 // tokens on OpenAI. We treat all images as ~150 to be safe.
                 total += 150
-                _ = data
             case .attachment:
                 break
             }
@@ -426,11 +426,12 @@ public final class MessageTokenCountCache: Sendable {
             case .toolResult(let rec):
                 hasher.combine(3)
                 hasher.combine(rec.outputJSON.count)
-            case .image(let data, _):
+            case .image(let ref):
                 hasher.combine(4)
-                hasher.combine(data.count)
-            case .attachment:
+                hasher.combine(ref.sha256)
+            case .attachment(let ref):
                 hasher.combine(5)
+                hasher.combine(ref.sha256)
             }
         }
         return hasher.finalize()
