@@ -8,7 +8,7 @@ import Foundation
 @Suite("Core smoke")
 struct CoreSmokeTests {
     @Test func appIdentifierMatches() {
-        #expect(FChat.appIdentifier == "app.fyrby.fchat")
+        #expect(FChat.appIdentifier == "com.fyrbyadditive.fchat")
     }
 
     @Test func messageContentRoundTripsThroughJSON() throws {

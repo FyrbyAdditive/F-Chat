@@ -7,7 +7,7 @@ import Foundation
 
 @Suite("KeychainStore", .serialized)
 struct KeychainStoreTests {
-    static let testService = "app.fyrby.fchat.tests.\(UUID().uuidString)"
+    static let testService = "com.fyrbyadditive.fchat.tests.\(UUID().uuidString)"
 
     private func makeStore() -> KeychainStore { KeychainStore(service: Self.testService) }
 

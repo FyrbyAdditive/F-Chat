@@ -119,7 +119,7 @@ cat >"$APP_DIR/Contents/Info.plist" <<'PLIST'
     <key>CFBundleIconFile</key>
     <string>AppIcon</string>
     <key>CFBundleIdentifier</key>
-    <string>app.fyrby.fchat</string>
+    <string>com.fyrbyadditive.fchat</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleLocalizations</key>
@@ -138,7 +138,7 @@ cat >"$APP_DIR/Contents/Info.plist" <<'PLIST'
     <array>
         <dict>
             <key>CFBundleURLName</key>
-            <string>app.fyrby.fchat.oauth</string>
+            <string>com.fyrbyadditive.fchat.oauth</string>
             <key>CFBundleURLSchemes</key>
             <array>
                 <string>fchat</string>
