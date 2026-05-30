@@ -30,6 +30,10 @@ struct FChatApp: App {
                     environment.requestImportChats()
                 }
                 .keyboardShortcut("i", modifiers: [.command, .shift])
+                Button("Export Chats to File\u{2026}") {
+                    environment.requestExportChats()
+                }
+                .keyboardShortcut("e", modifiers: [.command, .shift])
             }
             // Replace the stock AppKit "About F-Chat" panel with a command
             // that opens the Settings window on its About tab — so there's a

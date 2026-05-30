@@ -19,6 +19,12 @@ struct SidebarView: View {
     @State private var importPreview: ChatImportPreview?
     @State private var importResult: ChatImportSummary?
     @State private var importError: String?
+    /// Chat-export flow: wizard (cherry-pick + format) builds a bundle →
+    /// `.fileExporter` save panel writes it. Single-chat export skips the wizard.
+    @State private var exportPreview: ChatExportPreview?
+    @State private var pendingExportBundle: ChatExportBundle?
+    @State private var showExportSavePanel = false
+    @State private var exportError: String?
 
     var body: some View {
         // The conversations list scrolls on its own; Collections + Settings are
@@ -75,6 +81,15 @@ struct SidebarView: View {
             }
             ToolbarItem(placement: .primaryAction) {
                 Button {
+                    exportPreview = environment.exportPreview()
+                } label: {
+                    Label("Export chats", systemImage: "square.and.arrow.up")
+                }
+                .help("Export conversations to Markdown, JSON, Word, or text")
+                .disabled(environment.conversations.isEmpty)
+            }
+            ToolbarItem(placement: .primaryAction) {
+                Button {
                     environment.newConversation(title: "New chat")
                 } label: {
                     Label("New chat", systemImage: "plus")
@@ -118,6 +133,48 @@ struct SidebarView: View {
             } else if let importResult {
                 Text(importSummaryMessage(importResult))
             }
+        }
+        // Export — toolbar button and File ▸ Export Chats… both open the wizard;
+        // the row context menu requests a single-chat export (no wizard).
+        .onChange(of: environment.exportChatsRequests) { _, _ in
+            exportPreview = environment.exportPreview()
+        }
+        .sheet(isPresented: Binding(
+            get: { exportPreview != nil },
+            set: { if !$0 { exportPreview = nil } }
+        )) {
+            if let preview = exportPreview {
+                ExportChatsSheet(
+                    environment: environment,
+                    preview: preview,
+                    isPresented: Binding(
+                        get: { exportPreview != nil },
+                        set: { if !$0 { exportPreview = nil } }
+                    ),
+                    onExport: { bundle in
+                        pendingExportBundle = bundle
+                        showExportSavePanel = true
+                    },
+                    onError: { exportError = $0 }
+                )
+            }
+        }
+        // Save via NSSavePanel rather than .fileExporter: the format is already
+        // chosen (in the wizard or the context-menu submenu), so the panel must
+        // NOT offer a different list of file types. NSSavePanel with a single
+        // allowedContentType shows exactly the chosen format and nothing else.
+        .onChange(of: showExportSavePanel) { _, present in
+            guard present, let bundle = pendingExportBundle else { return }
+            showExportSavePanel = false
+            presentSavePanel(for: bundle)
+        }
+        .alert("Export chats", isPresented: Binding(
+            get: { exportError != nil },
+            set: { if !$0 { exportError = nil } }
+        )) {
+            Button("OK", role: .cancel) { exportError = nil }
+        } message: {
+            if let exportError { Text(exportError) }
         }
         .confirmationDialog(
             confirmationTitle,
@@ -248,6 +305,15 @@ struct SidebarView: View {
             } label: {
                 Label("Rename\u{2026}", systemImage: "pencil")
             }
+            Menu {
+                ForEach(ChatExportFormat.allCases) { format in
+                    Button(format.displayName) {
+                        handleSingleChatExport(conversation.id, format: format)
+                    }
+                }
+            } label: {
+                Label("Export", systemImage: "square.and.arrow.up")
+            }
             Divider()
             Button(role: .destructive) {
                 pendingDeletion = conversation.id
@@ -278,6 +344,41 @@ struct SidebarView: View {
             importPreview = try environment.prepareImport(from: url)
         } catch {
             importError = (error as? CustomStringConvertible)?.description ?? error.localizedDescription
+        }
+    }
+
+    /// Build a single conversation's export in the chosen format and present the
+    /// save panel (defaulting to the sanitised chat title).
+    private func handleSingleChatExport(_ id: ConversationID, format: ChatExportFormat) {
+        do {
+            pendingExportBundle = try environment.buildExport(single: id, format: format)
+            showExportSavePanel = true
+        } catch {
+            exportError = (error as? CustomStringConvertible)?.description ?? error.localizedDescription
+        }
+    }
+
+    /// Write an already-built bundle via an NSSavePanel locked to the bundle's
+    /// own content type — the format was chosen upstream, so the panel offers no
+    /// other file types.
+    private func presentSavePanel(for bundle: ChatExportBundle) {
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = bundle.suggestedFilename
+        panel.allowedContentTypes = [bundle.contentType]
+        // The filename already carries the right extension; don't let the panel
+        // hide or second-guess it.
+        panel.canCreateDirectories = true
+        panel.isExtensionHidden = false
+        panel.showsTagField = false
+        let data = bundle.data
+        pendingExportBundle = nil
+        panel.begin { response in
+            guard response == .OK, let url = panel.url else { return }
+            do {
+                try data.write(to: url, options: [.atomic])
+            } catch {
+                exportError = error.localizedDescription
+            }
         }
     }
 

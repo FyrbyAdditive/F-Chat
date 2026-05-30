@@ -47,10 +47,12 @@ public struct ImportedMessage: Sendable, Hashable {
     }
 }
 
-/// Which third-party export a payload was recognised as.
+/// Which export a payload was recognised as.
 public enum ChatImportFormat: String, Sendable, Hashable {
     case chatGPT = "ChatGPT"
     case claude = "Claude"
+    /// F-Chat's own native JSON export (round-trips losslessly).
+    case fchat = "F-Chat"
 }
 
 /// Outcome of parsing an export: the recognised format, the chats, and any
