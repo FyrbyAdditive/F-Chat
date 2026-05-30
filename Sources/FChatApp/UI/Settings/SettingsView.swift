@@ -741,35 +741,55 @@ private struct OptionalIntRow: View {
 
 private struct AboutTab: View {
     var body: some View {
-        VStack(spacing: 12) {
-            logoImage
-                .resizable()
-                .interpolation(.high)
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 128, height: 128)
-                // macOS app icons use a squircle (continuous corner) at
-                // ~22% of the icon edge. 128 * 0.22 ≈ 28pt.
-                .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-            Text("F-Chat").font(.title.bold())
-            Text("Version \(FChat.version)")
-                .foregroundStyle(.secondary)
-            Text("Native macOS LLM chat client.")
-                .foregroundStyle(.secondary)
+        VStack(spacing: 0) {
+            // F-Chat logo + name/version/description, vertically centered in
+            // the available space (equal spacers above and below).
+            Spacer()
+            VStack(spacing: 12) {
+                Self.bundledImage(named: "AppLogo", fallbackSymbol: "sparkles")
+                    .resizable()
+                    .interpolation(.high)
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 128, height: 128)
+                    // macOS app icons use a squircle (continuous corner) at
+                    // ~22% of the icon edge. 128 * 0.22 ≈ 28pt.
+                    .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+                Text("F-Chat").font(.title.bold())
+                Text("Version \(FChat.version)")
+                    .foregroundStyle(.secondary)
+                Text("Native macOS LLM chat client.")
+                    .foregroundStyle(.secondary)
+
+                // Company wordmark just above the copyright line.
+                Self.bundledImage(named: "FameLogo", fallbackSymbol: "building.2")
+                    .resizable()
+                    .interpolation(.high)
+                    .aspectRatio(contentMode: .fit)
+                    .frame(maxWidth: 128)
+                    .accessibilityLabel("Fyrby Additive Manufacturing & Engineering")
+                    .padding(.top, 20)
+                Text("© 2026 Tim Ellis · Fyrby Additive Manufacturing & Engineering")
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer()
         }
+        .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    /// Load the logo from the FChatApp SPM resource bundle as an NSImage.
+    /// Load a PNG from the FChatApp SPM resource bundle as an NSImage.
     /// `Image(name:bundle:)` with a loose PNG path is unreliable in SPM
     /// resource bundles (it expects asset-catalog entries); going through
-    /// NSImage with the absolute file URL always works.
-    private var logoImage: Image {
+    /// NSImage with the resource URL always works. Falls back to an SF Symbol.
+    private static func bundledImage(named name: String, fallbackSymbol: String) -> Image {
         #if canImport(AppKit)
-        if let url = Bundle.module.url(forResource: "AppLogo", withExtension: "png"),
+        if let url = Bundle.module.url(forResource: name, withExtension: "png"),
            let nsImage = NSImage(contentsOf: url) {
             return Image(nsImage: nsImage)
         }
         #endif
-        return Image(systemName: "sparkles")
+        return Image(systemName: fallbackSymbol)
     }
 }
