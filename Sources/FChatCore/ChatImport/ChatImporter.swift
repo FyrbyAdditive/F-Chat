@@ -62,8 +62,13 @@ public enum ChatImporter {
         return ChatImportResult(format: format, chats: chats, warnings: warnings)
     }
 
+    /// How many conversation objects the export contained at the top level —
+    /// an array's count, or 1 for a single-conversation object. Used to detect
+    /// skipped (unreadable) conversations for the warning.
     private static func topLevelCount(_ json: Any) -> Int {
-        (json as? [Any])?.count ?? 0
+        if let array = json as? [Any] { return array.count }
+        if json is [String: Any] { return 1 }
+        return 0
     }
 
     // MARK: - Zip

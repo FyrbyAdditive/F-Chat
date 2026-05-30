@@ -677,25 +677,39 @@ final class AppEnvironment {
 
     // MARK: - Import
 
-    /// Import conversations exported from ChatGPT or Claude (a `.zip` data
-    /// export or the raw `conversations.json`) as native conversations. Each
-    /// imported chat is assigned the current active provider so it can be
-    /// browsed and continued; the exported model name is used when present.
-    /// New conversations are inserted at the top; persistence fires via the
-    /// `conversations` didSet. Throws `ChatImportError` on unreadable/empty/
-    /// unrecognised input.
-    @discardableResult
-    func importChats(from url: URL) throws -> ChatImportSummary {
+    /// Phase 1 of import: parse an export file (ChatGPT/Claude `.zip` or raw
+    /// `conversations.json`) into a previewable selection. Does NOT add anything
+    /// — the import wizard shows these so the user can cherry-pick which chats
+    /// to bring in (a Claude export is the user's entire history). Throws
+    /// `ChatImportError` on unreadable/empty/unrecognised input.
+    func prepareImport(from url: URL) throws -> ChatImportPreview {
         let result = try ChatImporter.parse(fileURL: url)
+        guard currentProvider() != nil else {
+            // No provider to attach imported chats to — surface clearly.
+            throw ChatImportError.unrecognizedFormat
+        }
+        let items = result.chats.enumerated().map { ChatImportPreview.Item(index: $0.offset, chat: $0.element) }
+        return ChatImportPreview(format: result.format, items: items, warnings: result.warnings)
+    }
+
+    /// Phase 2 of import: commit the chosen subset of a previously prepared
+    /// preview as native conversations. Each is assigned the current active
+    /// provider (exported model name when present); per-message timestamps are
+    /// preserved. Inserted at the top; persistence fires via the `conversations`
+    /// didSet.
+    @discardableResult
+    func commitImport(_ preview: ChatImportPreview, selecting selectedIndices: Set<Int>) -> ChatImportSummary {
         guard let provider = currentProvider() else {
-            throw ChatImportError.unrecognizedFormat   // no provider to attach to
+            return ChatImportSummary(format: preview.format, conversationCount: 0, messageCount: 0, warnings: preview.warnings)
         }
         let fallbackModel = provider.defaultModel
             ?? detectedModels[provider.id]?.first?.id
             ?? ""
 
+        let chosen = preview.items.filter { selectedIndices.contains($0.index) }.map(\.chat)
         var created: [Conversation] = []
-        for chat in result.chats {
+        var messageCount = 0
+        for chat in chosen {
             let settings = ChatSettings(
                 model: (chat.model?.isEmpty == false ? chat.model! : fallbackModel),
                 providerID: provider.id
@@ -714,6 +728,7 @@ final class AppEnvironment {
                     createdAt: m.createdAt
                 )
             }
+            messageCount += messages.count
             created.append(Conversation(
                 title: chat.title,
                 createdAt: chat.createdAt,
@@ -730,10 +745,10 @@ final class AppEnvironment {
             sidebarSelection = .conversation(first.id)
         }
         return ChatImportSummary(
-            format: result.format,
+            format: preview.format,
             conversationCount: created.count,
-            messageCount: result.messageCount,
-            warnings: result.warnings
+            messageCount: messageCount,
+            warnings: preview.warnings
         )
     }
 
@@ -833,8 +848,24 @@ enum SettingsTab: Hashable {
     case providers, agents, tools, skills, mcp, about
 }
 
-/// UI-facing outcome of a chat import, surfaced as a confirmation in the
-/// sidebar after `AppEnvironment.importChats(from:)`.
+/// Parsed-but-not-yet-imported chats, shown in the import wizard so the user
+/// can cherry-pick which to bring in. `Item.index` is a stable selection key.
+struct ChatImportPreview: Sendable {
+    struct Item: Identifiable, Sendable {
+        let index: Int
+        let chat: ImportedChat
+        var id: Int { index }
+        var title: String { chat.title }
+        var messageCount: Int { chat.messages.count }
+        var updatedAt: Date { chat.updatedAt }
+    }
+    let format: ChatImportFormat
+    let items: [Item]
+    let warnings: [String]
+}
+
+/// UI-facing outcome of a committed import, surfaced as a confirmation in the
+/// sidebar.
 struct ChatImportSummary: Sendable {
     let format: ChatImportFormat
     let conversationCount: Int

@@ -18,21 +18,39 @@ public enum ChatGPTImporter {
         } catch {
             throw ChatImportError.notValidJSON(error.localizedDescription)
         }
-        guard let array = root as? [[String: Any]] else {
-            throw ChatImportError.unrecognizedFormat
-        }
+        // Accept either the full export (a top-level array of conversations) or
+        // a single-conversation export (one conversation object, as produced by
+        // browser extensions / the share-link API). Both use the same per-chat
+        // `mapping` shape.
+        let conversations = conversationObjects(from: root)
+        guard !conversations.isEmpty else { throw ChatImportError.unrecognizedFormat }
         var chats: [ImportedChat] = []
-        for convo in array {
+        for convo in conversations {
             if let chat = parseConversation(convo) { chats.append(chat) }
         }
         return chats
     }
 
-    /// True if a decoded JSON value looks like a ChatGPT export (array of
-    /// objects carrying a `mapping`). Used by the format detector.
+    /// Normalise the decoded JSON to a list of conversation objects, whether the
+    /// top level is an array (full export) or a single conversation object
+    /// (single-chat export). Returns empty when it's neither.
+    private static func conversationObjects(from json: Any) -> [[String: Any]] {
+        if let array = json as? [[String: Any]] { return array }
+        if let object = json as? [String: Any], object["mapping"] is [String: Any] { return [object] }
+        return []
+    }
+
+    /// True if a decoded JSON value looks like a ChatGPT export — either an
+    /// array of objects carrying a `mapping`, or a single conversation object
+    /// with a `mapping`. Used by the format detector.
     static func looksLikeChatGPT(_ json: Any) -> Bool {
-        guard let array = json as? [[String: Any]], let first = array.first else { return false }
-        return first["mapping"] is [String: Any]
+        if let array = json as? [[String: Any]], let first = array.first {
+            return first["mapping"] is [String: Any]
+        }
+        if let object = json as? [String: Any] {
+            return object["mapping"] is [String: Any]
+        }
+        return false
     }
 
     // MARK: - Per-conversation

@@ -88,6 +88,34 @@ struct ChatGPTImportTests {
         // Whole conversation has no readable messages → skipped entirely.
         #expect(try ChatGPTImporter.parse(Data(empty.utf8)).isEmpty)
     }
+
+    @Test func singleConversationObjectIsAccepted() throws {
+        // Browser-extension / share-link exports are ONE conversation object,
+        // not an array. Same per-chat `mapping` shape.
+        let single = """
+        {
+          "title": "Just one chat", "create_time": 100.0, "update_time": 200.0, "current_node": "b",
+          "mapping": {
+            "a": { "id":"a", "parent": null, "children": ["b"],
+                   "message": { "author": {"role":"user"}, "create_time": 100.0,
+                                "content": {"content_type":"text","parts":["hello"]} } },
+            "b": { "id":"b", "parent": "a", "children": [],
+                   "message": { "author": {"role":"assistant"}, "create_time": 110.0,
+                                "content": {"content_type":"text","parts":["hi back"]} } }
+          }
+        }
+        """
+        #expect(ChatGPTImporter.looksLikeChatGPT(try JSONSerialization.jsonObject(with: Data(single.utf8))))
+        let chats = try ChatGPTImporter.parse(Data(single.utf8))
+        #expect(chats.count == 1)
+        #expect(chats[0].title == "Just one chat")
+        #expect(chats[0].messages.map(\.text) == ["hello", "hi back"])
+        // Routes through the dispatcher with no spurious skip warning.
+        let result = try ChatImporter.parse(jsonData: Data(single.utf8))
+        #expect(result.format == .chatGPT)
+        #expect(result.chats.count == 1)
+        #expect(result.warnings.isEmpty)
+    }
 }
 
 @Suite("Claude import")

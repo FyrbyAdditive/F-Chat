@@ -13,8 +13,10 @@ struct SidebarView: View {
     @State private var renamingID: ConversationID?
     @State private var renameDraft: String = ""
     @FocusState private var renameFieldFocus: ConversationID?
-    /// Chat-import (ChatGPT/Claude) file picker + result/error for the alert.
+    /// Chat-import (ChatGPT/Claude) flow: file picker → parsed preview shown in
+    /// the wizard sheet → committed-summary / error alert.
     @State private var showChatImporter = false
+    @State private var importPreview: ChatImportPreview?
     @State private var importResult: ChatImportSummary?
     @State private var importError: String?
 
@@ -86,6 +88,22 @@ struct SidebarView: View {
             allowsMultipleSelection: false
         ) { result in
             handleChatImport(result)
+        }
+        .sheet(isPresented: Binding(
+            get: { importPreview != nil },
+            set: { if !$0 { importPreview = nil } }
+        )) {
+            if let preview = importPreview {
+                ImportChatsSheet(
+                    environment: environment,
+                    preview: preview,
+                    isPresented: Binding(
+                        get: { importPreview != nil },
+                        set: { if !$0 { importPreview = nil } }
+                    ),
+                    onCommit: { importResult = $0 }
+                )
+            }
         }
         .alert("Import chats", isPresented: importAlertPresented) {
             Button("OK", role: .cancel) { importResult = nil; importError = nil }
@@ -246,11 +264,13 @@ struct SidebarView: View {
     private func handleChatImport(_ result: Result<[URL], Error>) {
         importResult = nil
         importError = nil
+        importPreview = nil
         do {
             guard let url = try result.get().first else { return }
             let scoped = url.startAccessingSecurityScopedResource()
             defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-            importResult = try environment.importChats(from: url)
+            // Phase 1: parse to a preview, then present the selection wizard.
+            importPreview = try environment.prepareImport(from: url)
         } catch {
             importError = (error as? CustomStringConvertible)?.description ?? error.localizedDescription
         }
