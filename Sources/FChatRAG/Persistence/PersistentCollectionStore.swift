@@ -16,7 +16,10 @@ import FChatCore
 /// on first reference after a fresh app launch.
 public actor PersistentCollectionStore: CollectionStoreProtocol {
     public let database: RAGDatabase
-    private var embedders: [CollectionID: any Embedder] = [:]
+    // Cache the in-flight (or completed) embedder-build Task, not the embedder
+    // itself, so concurrent ops for one collection share a single expensive
+    // (~2 GB MLX) initialisation instead of each building their own.
+    private var embedderTasks: [CollectionID: Task<any Embedder, Error>] = [:]
     private var vectorStores: [CollectionID: SQLiteVecVectorStore] = [:]
     /// Recreates an embedder instance from the persisted (kind, model, dim)
     /// after a fresh app launch (when the in-memory dictionary is empty).
@@ -95,7 +98,7 @@ public actor PersistentCollectionStore: CollectionStoreProtocol {
             dim: embedder.dim,
             distance: distance
         )
-        embedders[collection.id] = embedder
+        embedderTasks[collection.id] = Task { embedder }
         vectorStores[collection.id] = store
         return collection
     }
@@ -109,7 +112,7 @@ public actor PersistentCollectionStore: CollectionStoreProtocol {
         try await database.queue.write { db in
             try db.execute(sql: "DELETE FROM collections WHERE id = ?", arguments: [id.rawValue.uuidString])
         }
-        embedders[id] = nil
+        embedderTasks[id] = nil
         vectorStores[id] = nil
     }
 
@@ -309,10 +312,20 @@ public actor PersistentCollectionStore: CollectionStoreProtocol {
     // MARK: - Lazy embedders / stores
 
     private func embedderForCollection(_ collection: RAGCollection) async throws -> any Embedder {
-        if let cached = embedders[collection.id] { return cached }
-        let fresh = try await embedderFactory(collection.embedder, collection.embeddingModel, collection.dim)
-        embedders[collection.id] = fresh
-        return fresh
+        if let inFlight = embedderTasks[collection.id] {
+            return try await inFlight.value
+        }
+        let task = Task { [embedderFactory] in
+            try await embedderFactory(collection.embedder, collection.embeddingModel, collection.dim)
+        }
+        embedderTasks[collection.id] = task
+        do {
+            return try await task.value
+        } catch {
+            // Don't cache a failed build — let the next call retry.
+            embedderTasks[collection.id] = nil
+            throw error
+        }
     }
 
     private func vectorStoreForCollection(_ collection: RAGCollection) throws -> SQLiteVecVectorStore {
