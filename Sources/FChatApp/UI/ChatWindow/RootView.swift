@@ -10,7 +10,10 @@ struct RootView: View {
     var body: some View {
         NavigationSplitView {
             SidebarView(environment: environment)
-                .navigationSplitViewColumnWidth(min: 220, ideal: 260, max: 340)
+                // min wide enough that the three toolbar buttons (Import, Export,
+                // New) always fit and never collapse into an overflow menu where
+                // they could be stranded.
+                .navigationSplitViewColumnWidth(min: 280, ideal: 300, max: 360)
         } detail: {
             switch environment.sidebarSelection {
             case .conversation(let id):

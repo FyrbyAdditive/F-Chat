@@ -74,6 +74,11 @@ struct SidebarView: View {
         }
         .navigationTitle("F-Chat")
         .toolbar {
+            // Import · Export · New(+), in that fixed left-to-right order. The
+            // sidebar column's minimum width (set in RootView) is wide enough to
+            // fit all three, so they never collapse into an overflow menu and none
+            // can be stranded — the user can't drag the sidebar narrow enough to
+            // starve the toolbar.
             ToolbarItem(placement: .primaryAction) {
                 Button {
                     showChatImporter = true
