@@ -36,7 +36,7 @@ public struct WebSearchTool: Tool {
         let normalised = trimmed.isEmpty ? "{}" : trimmed
         guard let data = normalised.data(using: .utf8),
               let parsed = try? JSONDecoder().decode(Args.self, from: data) else {
-            let message = #"{"error":"Could not parse arguments. Expected JSON of the form {\"query\": string, \"max_results\"?: integer}. Got: \#(escape(arguments))"}"#
+            let message = #"{"error":"Could not parse arguments. Expected JSON of the form {\"query\": string, \"max_results\"?: integer}. Got: \#(arguments.escapedForJSONInline())"}"#
             return ToolOutput(outputJSON: message, isError: true, display: .markdown)
         }
         let cleanQuery = parsed.query.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -51,17 +51,10 @@ public struct WebSearchTool: Tool {
             let str = String(data: json, encoding: .utf8) ?? "{}"
             return ToolOutput(outputJSON: str, display: .markdown)
         } catch {
-            let message = #"{"error":"web_search failed: \#(escape(error.localizedDescription))"}"#
+            let message = #"{"error":"web_search failed: \#(error.localizedDescription.escapedForJSONInline())"}"#
             return ToolOutput(outputJSON: message, isError: true, display: .markdown)
         }
     }
-}
-
-private func escape(_ text: String) -> String {
-    text
-        .replacingOccurrences(of: "\\", with: "\\\\")
-        .replacingOccurrences(of: "\"", with: "\\\"")
-        .replacingOccurrences(of: "\n", with: " ")
 }
 
 private struct WebSearchResultsPayload: Encodable {

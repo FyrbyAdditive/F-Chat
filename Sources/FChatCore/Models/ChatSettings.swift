@@ -90,7 +90,7 @@ public struct ChatSettings: Codable, Sendable, Hashable {
         self.attachedCollections = try c.decode(Set<CollectionID>.self, forKey: .attachedCollections)
         self.enabledServerTools = try c.decode(Set<ServerSideTool>.self, forKey: .enabledServerTools)
         self.responseStorageMode = try c.decode(ResponseStorageMode.self, forKey: .responseStorageMode)
-        self.enabledSkills = try c.decodeIfPresent(Set<SkillID>.self, forKey: .enabledSkills) ?? []
+        self.enabledSkills = try c.decode(Set<SkillID>.self, forKey: .enabledSkills, default: [])
     }
 }
 

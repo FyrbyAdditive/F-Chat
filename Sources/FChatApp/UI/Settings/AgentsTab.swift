@@ -38,46 +38,22 @@ struct AgentsTab: View {
         .sheet(isPresented: $showAddSheet) {
             AddAgentSheet(environment: environment, isPresented: $showAddSheet)
         }
-        .confirmationDialog(
-            deletionTitle,
-            isPresented: Binding(
-                get: { pendingDeletion != nil },
-                set: { if !$0 { pendingDeletion = nil } }
-            ),
-            titleVisibility: .visible
-        ) {
-            Button("Delete", role: .destructive) {
-                if let id = pendingDeletion {
-                    environment.deleteAgent(id)
-                }
-                pendingDeletion = nil
-            }
-            Button("Cancel", role: .cancel) {
-                pendingDeletion = nil
-            }
-        } message: {
-            if let id = pendingDeletion {
+        .confirmDeletion(
+            for: $pendingDeletion,
+            title: { id in
+                let name = environment.agents.first(where: { $0.id == id })?.name ?? ""
+                return "Delete agent \"\(name)\"?"
+            },
+            message: { id in
                 let count = environment.chatCountUsingAgent(id)
                 if count > 0 {
                     Text("\(count) chats will fall back to the Default agent.")
                 } else {
                     Text("This agent isn't used by any chat.")
                 }
-            } else {
-                Text("")
-            }
-        }
-    }
-
-    private var deletionTitle: LocalizedStringKey {
-        // Always called with pendingDeletion != nil and the agent in
-        // the list, but defensively format the empty string if not so
-        // we don't introduce a "Delete agent?" key that collides with
-        // the symbol for the "Delete agent" button label.
-        guard let id = pendingDeletion,
-              let agent = environment.agents.first(where: { $0.id == id })
-        else { return "" }
-        return "Delete agent \"\(agent.name)\"?"
+            },
+            onConfirm: { environment.deleteAgent($0) }
+        )
     }
 
     @ViewBuilder
@@ -222,12 +198,7 @@ private struct AgentCard: View {
                         }
                     }
                 ))
-                .font(.body.monospaced())
-                .frame(minHeight: 140)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 4)
-                        .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
-                )
+                .monospacedEditorBorder()
                 .foregroundStyle(isUsingBuiltIn ? .secondary : .primary)
             }
         }
@@ -250,24 +221,17 @@ private struct AddAgentSheet: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 TextEditor(text: $basePrompt)
-                    .font(.body.monospaced())
-                    .frame(minHeight: 160)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 4)
-                            .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
-                    )
+                    .monospacedEditorBorder(minHeight: 160)
             }
-            HStack {
-                Spacer()
-                Button("Cancel") { isPresented = false }
-                    .keyboardShortcut(.cancelAction)
-                Button("Add") {
+            DialogActionButtons(
+                confirmLabel: "Add",
+                confirmDisabled: name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                onCancel: { isPresented = false },
+                onConfirm: {
                     _ = environment.addAgent(name: name, basePrompt: basePrompt)
                     isPresented = false
                 }
-                .keyboardShortcut(.defaultAction)
-                .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            }
+            )
         }
         .padding(20)
         .frame(width: 480, height: 380)

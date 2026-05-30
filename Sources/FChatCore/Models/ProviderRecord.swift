@@ -92,13 +92,12 @@ public struct ProviderRecord: Identifiable, Sendable, Hashable, Codable {
         self.displayName = try c.decode(String.self, forKey: .displayName)
         self.baseURL = try c.decode(URL.self, forKey: .baseURL)
         self.defaultModel = try c.decodeIfPresent(String.self, forKey: .defaultModel)
-        self.capability = try c.decodeIfPresent(ProviderCapability.self, forKey: .capability) ?? .init()
-        self.modelOverrides = try c.decodeIfPresent([ModelOverride].self, forKey: .modelOverrides) ?? []
-        self.sampling = try c.decodeIfPresent(ProviderSamplingDefaults.self, forKey: .sampling) ?? .init()
-        self.context = try c.decodeIfPresent(ProviderContextSettings.self, forKey: .context) ?? .init()
-        self.requestTimeout = try c.decodeIfPresent(TimeInterval.self, forKey: .requestTimeout)
-            ?? ProviderRecord.defaultRequestTimeout
-        self.apiKind = try c.decodeIfPresent(LLMAPIKind.self, forKey: .apiKind) ?? .openAIResponses
+        self.capability = try c.decode(ProviderCapability.self, forKey: .capability, default: .init())
+        self.modelOverrides = try c.decode([ModelOverride].self, forKey: .modelOverrides, default: [])
+        self.sampling = try c.decode(ProviderSamplingDefaults.self, forKey: .sampling, default: .init())
+        self.context = try c.decode(ProviderContextSettings.self, forKey: .context, default: .init())
+        self.requestTimeout = try c.decode(TimeInterval.self, forKey: .requestTimeout, default: ProviderRecord.defaultRequestTimeout)
+        self.apiKind = try c.decode(LLMAPIKind.self, forKey: .apiKind, default: .openAIResponses)
     }
 }
 
@@ -136,8 +135,8 @@ public struct ProviderContextSettings: Sendable, Hashable, Codable {
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         let cap = try c.decodeIfPresent(Int.self, forKey: .hardCap)
-        let reserve = try c.decodeIfPresent(Int.self, forKey: .outputReserve) ?? 4096
-        let keep = try c.decodeIfPresent(Int.self, forKey: .recentKeepCount) ?? 6
+        let reserve = try c.decode(Int.self, forKey: .outputReserve, default: 4096)
+        let keep = try c.decode(Int.self, forKey: .recentKeepCount, default: 6)
         self.init(hardCap: cap, outputReserve: reserve, recentKeepCount: keep)
     }
 

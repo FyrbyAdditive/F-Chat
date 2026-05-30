@@ -80,11 +80,8 @@ public struct MakeChartTool: Tool {
     }
 
     private func error(_ message: String) -> ToolOutput {
-        let escaped = message
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "\"", with: "\\\"")
-        return ToolOutput(
-            outputJSON: "{\"error\":\"\(escaped)\"}",
+        ToolOutput(
+            outputJSON: "{\"error\":\"\(message.escapedForJSON())\"}",
             isError: true,
             display: .markdown
         )

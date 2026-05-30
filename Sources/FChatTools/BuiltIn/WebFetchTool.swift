@@ -50,12 +50,12 @@ public struct WebFetchTool: Tool {
         let normalised = trimmed.isEmpty ? "{}" : trimmed
         guard let data = normalised.data(using: .utf8),
               let parsed = try? JSONDecoder().decode(Args.self, from: data) else {
-            let message = #"{"error":"Could not parse arguments. Expected {\"url\": string}. Got: \#(escapeWebFetch(arguments))"}"#
+            let message = #"{"error":"Could not parse arguments. Expected {\"url\": string}. Got: \#(arguments.escapedForJSONInline())"}"#
             return ToolOutput(outputJSON: message, isError: true, display: .markdown)
         }
         let urlString = parsed.url.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let url = URL(string: urlString) else {
-            return ToolOutput(outputJSON: #"{"error":"Invalid URL: \#(escapeWebFetch(parsed.url))"}"#, isError: true, display: .markdown)
+            return ToolOutput(outputJSON: #"{"error":"Invalid URL: \#(parsed.url.escapedForJSONInline())"}"#, isError: true, display: .markdown)
         }
 
         // Cache hit: skip the network entirely.
@@ -76,7 +76,7 @@ public struct WebFetchTool: Tool {
             let json = try JSONEncoder().encode(clipped)
             return ToolOutput(outputJSON: String(data: json, encoding: .utf8) ?? "{}", display: .markdown)
         } catch {
-            let message = #"{"error":"web_fetch failed: \#(escapeWebFetch(error.localizedDescription))"}"#
+            let message = #"{"error":"web_fetch failed: \#(error.localizedDescription.escapedForJSONInline())"}"#
             return ToolOutput(outputJSON: message, isError: true, display: .markdown)
         }
     }
@@ -94,11 +94,4 @@ public struct WebFetchTool: Tool {
         clipped.content = head + marker + tail
         return clipped
     }
-}
-
-private func escapeWebFetch(_ text: String) -> String {
-    text
-        .replacingOccurrences(of: "\\", with: "\\\\")
-        .replacingOccurrences(of: "\"", with: "\\\"")
-        .replacingOccurrences(of: "\n", with: " ")
 }

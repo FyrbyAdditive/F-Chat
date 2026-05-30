@@ -10,19 +10,7 @@ public struct AppStateStore: Sendable {
     public let fileURL: URL
 
     public init(fileURL: URL? = nil) {
-        if let fileURL {
-            self.fileURL = fileURL
-        } else {
-            let base = (try? FileManager.default.url(
-                for: .applicationSupportDirectory,
-                in: .userDomainMask,
-                appropriateFor: nil,
-                create: true
-            )) ?? URL(fileURLWithPath: NSTemporaryDirectory())
-            let dir = base.appendingPathComponent("F-Chat", isDirectory: true)
-            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-            self.fileURL = dir.appendingPathComponent("state.json")
-        }
+        self.fileURL = fileURL ?? AppDataDirectories.ensureRoot().appendingPathComponent("state.json")
     }
 
     public func load() -> PersistedAppState? {

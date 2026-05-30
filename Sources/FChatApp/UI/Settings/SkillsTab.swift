@@ -70,33 +70,22 @@ struct SkillsTab: View {
         .sheet(isPresented: $showAddSheet) {
             AddSkillSheet(environment: environment, isPresented: $showAddSheet)
         }
-        .confirmationDialog(
-            deletionTitle,
-            isPresented: Binding(
-                get: { pendingDeletion != nil },
-                set: { if !$0 { pendingDeletion = nil } }
-            ),
-            titleVisibility: .visible
-        ) {
-            Button("Delete", role: .destructive) {
-                if let id = pendingDeletion {
-                    environment.deleteSkill(id)
-                }
-                pendingDeletion = nil
-            }
-            Button("Cancel", role: .cancel) { pendingDeletion = nil }
-        } message: {
-            if let id = pendingDeletion {
+        .confirmDeletion(
+            for: $pendingDeletion,
+            title: { id in
+                let name = environment.skills.first(where: { $0.id == id })?.name ?? ""
+                return "Delete skill \"\(name)\"?"
+            },
+            message: { id in
                 let count = environment.chatCountUsingSkill(id)
                 if count > 0 {
                     Text("\(count) chats currently use this skill.")
                 } else {
                     Text("This skill isn't enabled in any chat.")
                 }
-            } else {
-                Text("")
-            }
-        }
+            },
+            onConfirm: { environment.deleteSkill($0) }
+        )
     }
 
     private var header: some View {
@@ -109,13 +98,6 @@ struct SkillsTab: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private var deletionTitle: LocalizedStringKey {
-        guard let id = pendingDeletion,
-              let skill = environment.skills.first(where: { $0.id == id })
-        else { return "" }
-        return "Delete skill \"\(skill.name)\"?"
     }
 
     private func handleImport(_ result: Result<[URL], Error>) {
@@ -235,21 +217,17 @@ private struct AddSkillSheet: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 TextEditor(text: $body_)
-                    .font(.body.monospaced())
-                    .frame(minHeight: 140)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 4)
-                            .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
-                    )
+                    .monospacedEditorBorder()
             }
             if let error {
                 Text(error).font(.caption).foregroundStyle(.red)
             }
-            HStack {
-                Spacer()
-                Button("Cancel") { isPresented = false }
-                    .keyboardShortcut(.cancelAction)
-                Button("Create") {
+            DialogActionButtons(
+                confirmLabel: "Create",
+                confirmDisabled: name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    || description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                onCancel: { isPresented = false },
+                onConfirm: {
                     do {
                         _ = try environment.createSkill(name: name, description: description, body: body_)
                         isPresented = false
@@ -257,12 +235,7 @@ private struct AddSkillSheet: View {
                         self.error = (error as? CustomStringConvertible)?.description ?? error.localizedDescription
                     }
                 }
-                .keyboardShortcut(.defaultAction)
-                .disabled(
-                    name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                    || description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                )
-            }
+            )
         }
         .padding(20)
         .frame(width: 520, height: 440)

@@ -403,11 +403,10 @@ private struct AddProviderSheet: View {
             if let error {
                 Text(error).font(.caption).foregroundStyle(.red)
             }
-            HStack {
-                Spacer()
-                Button("Cancel") { isPresented = false }
-                    .keyboardShortcut(.cancelAction)
-                Button("Add") {
+            DialogActionButtons(
+                confirmLabel: "Add",
+                onCancel: { isPresented = false },
+                onConfirm: {
                     guard let parsed = URL(string: url), parsed.scheme != nil else {
                         error = String(localized: "Enter a full URL including scheme.")
                         return
@@ -415,8 +414,7 @@ private struct AddProviderSheet: View {
                     _ = environment.addProvider(displayName: name, baseURL: parsed, apiKind: apiKind)
                     isPresented = false
                 }
-                .keyboardShortcut(.defaultAction)
-            }
+            )
         }
         .padding(20)
         .frame(width: 420)

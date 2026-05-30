@@ -75,14 +75,14 @@ public struct Skill: Identifiable, Codable, Sendable, Hashable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         self.id = try c.decode(SkillID.self, forKey: .id)
         self.name = try c.decode(String.self, forKey: .name)
-        self.description = try c.decodeIfPresent(String.self, forKey: .description) ?? ""
-        self.body = try c.decodeIfPresent(String.self, forKey: .body) ?? ""
+        self.description = try c.decode(String.self, forKey: .description, default: "")
+        self.body = try c.decode(String.self, forKey: .body, default: "")
         self.version = try c.decodeIfPresent(String.self, forKey: .version)
         self.license = try c.decodeIfPresent(String.self, forKey: .license)
-        self.enabledByDefault = try c.decodeIfPresent(Bool.self, forKey: .enabledByDefault) ?? false
-        self.sourceKind = try c.decodeIfPresent(SourceKind.self, forKey: .sourceKind) ?? .imported
-        self.createdAt = try c.decodeIfPresent(Date.self, forKey: .createdAt) ?? .now
-        self.updatedAt = try c.decodeIfPresent(Date.self, forKey: .updatedAt) ?? .now
+        self.enabledByDefault = try c.decode(Bool.self, forKey: .enabledByDefault, default: false)
+        self.sourceKind = try c.decode(SourceKind.self, forKey: .sourceKind, default: .imported)
+        self.createdAt = try c.decode(Date.self, forKey: .createdAt, default: .now)
+        self.updatedAt = try c.decode(Date.self, forKey: .updatedAt, default: .now)
     }
 }
 

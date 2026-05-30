@@ -72,14 +72,14 @@ struct ProviderDecodersTests {
             {"index":0,"embedding":[1.0,2.0]}
         ]}
         """#
-        let vectors = try OpenAIResponsesProvider.decodeEmbeddings(json.data(using: .utf8)!, expectedCount: 2)
+        let vectors = try ProviderHTTP.decodeEmbeddings(json.data(using: .utf8)!, expectedCount: 2)
         #expect(vectors == [[1.0, 2.0], [3.0, 4.0]])
     }
 
     @Test func embeddingsCountMismatchThrows() {
         let json = #"{"data":[{"index":0,"embedding":[1.0]}]}"#
         #expect(throws: ProviderError.malformedResponse("embeddings count mismatch: got 1 expected 3")) {
-            _ = try OpenAIResponsesProvider.decodeEmbeddings(json.data(using: .utf8)!, expectedCount: 3)
+            _ = try ProviderHTTP.decodeEmbeddings(json.data(using: .utf8)!, expectedCount: 3)
         }
     }
 }

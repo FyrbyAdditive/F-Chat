@@ -32,15 +32,7 @@ public final class RAGDatabase: Sendable {
 
     /// Opens the default-location database under Application Support.
     public static func openDefault() throws -> RAGDatabase {
-        let base = (try? FileManager.default.url(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask,
-            appropriateFor: nil,
-            create: true
-        )) ?? URL(fileURLWithPath: NSTemporaryDirectory())
-        let url = base
-            .appendingPathComponent("F-Chat", isDirectory: true)
-            .appendingPathComponent("rag.sqlite")
+        let url = AppDataDirectories.ensureRoot().appendingPathComponent("rag.sqlite")
         return try RAGDatabase(fileURL: url)
     }
 

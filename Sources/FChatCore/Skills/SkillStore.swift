@@ -41,19 +41,7 @@ public struct SkillStore: Sendable {
     }
 
     public init(rootDirectory: URL? = nil) {
-        if let rootDirectory {
-            self.rootDirectory = rootDirectory
-        } else {
-            let base = (try? FileManager.default.url(
-                for: .applicationSupportDirectory,
-                in: .userDomainMask,
-                appropriateFor: nil,
-                create: true
-            )) ?? URL(fileURLWithPath: NSTemporaryDirectory())
-            self.rootDirectory = base
-                .appendingPathComponent("F-Chat", isDirectory: true)
-                .appendingPathComponent("Skills", isDirectory: true)
-        }
+        self.rootDirectory = rootDirectory ?? AppDataDirectories.subdirectory("Skills")
         try? FileManager.default.createDirectory(at: self.rootDirectory, withIntermediateDirectories: true)
     }
 

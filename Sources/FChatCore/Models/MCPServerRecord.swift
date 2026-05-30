@@ -107,9 +107,9 @@ public enum MCPTransportConfig: Sendable, Hashable, Codable {
         public init(from decoder: Decoder) throws {
             let c = try decoder.container(keyedBy: CodingKeys.self)
             self.url = try c.decode(URL.self, forKey: .url)
-            self.headers = try c.decodeIfPresent([String: String].self, forKey: .headers) ?? [:]
-            self.useOAuth = try c.decodeIfPresent(Bool.self, forKey: .useOAuth) ?? false
-            self.authMode = try c.decodeIfPresent(HTTPAuthMode.self, forKey: .authMode) ?? .none
+            self.headers = try c.decode([String: String].self, forKey: .headers, default: [:])
+            self.useOAuth = try c.decode(Bool.self, forKey: .useOAuth, default: false)
+            self.authMode = try c.decode(HTTPAuthMode.self, forKey: .authMode, default: .none)
             self.basicAuthEmail = try c.decodeIfPresent(String.self, forKey: .basicAuthEmail)
             self.oauthClientID = try c.decodeIfPresent(String.self, forKey: .oauthClientID)
             self.oauthAuthorizationServerURL = try c.decodeIfPresent(URL.self, forKey: .oauthAuthorizationServerURL)

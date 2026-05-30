@@ -42,33 +42,17 @@ struct MCPTab: View {
         .sheet(isPresented: $showAddSheet) {
             AddMCPServerSheet(environment: environment, isPresented: $showAddSheet)
         }
-        .confirmationDialog(
-            deletionTitle,
-            isPresented: Binding(
-                get: { pendingDeletion != nil },
-                set: { if !$0 { pendingDeletion = nil } }
-            ),
-            titleVisibility: .visible
-        ) {
-            Button("Delete", role: .destructive) {
-                if let id = pendingDeletion {
-                    environment.removeMCPServer(id)
-                }
-                pendingDeletion = nil
-            }
-            Button("Cancel", role: .cancel) {
-                pendingDeletion = nil
-            }
-        } message: {
-            Text("Its tools will no longer be available to any chat until you re-add it.")
-        }
-    }
-
-    private var deletionTitle: LocalizedStringKey {
-        guard let id = pendingDeletion,
-              let record = environment.mcpServers.first(where: { $0.id == id })
-        else { return "" }
-        return "Delete server \"\(record.displayName)\"?"
+        .confirmDeletion(
+            for: $pendingDeletion,
+            title: { id in
+                let name = environment.mcpServers.first(where: { $0.id == id })?.displayName ?? ""
+                return "Delete server \"\(name)\"?"
+            },
+            message: { _ in
+                Text("Its tools will no longer be available to any chat until you re-add it.")
+            },
+            onConfirm: { environment.removeMCPServer($0) }
+        )
     }
 
     @ViewBuilder
@@ -266,9 +250,7 @@ private struct MCPServerForm: View {
                         record.transport = .stdio(config)
                     }
                 ))
-                .font(.body.monospaced())
-                .frame(minHeight: 60)
-                .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.secondary.opacity(0.3), lineWidth: 1))
+                .monospacedEditorBorder(minHeight: 60)
             }
             LabeledContent("Working directory") {
                 TextField("optional", text: Binding(
@@ -331,9 +313,7 @@ private struct MCPServerForm: View {
                             record.transport = .http(config)
                         }
                     ))
-                    .font(.body.monospaced())
-                    .frame(minHeight: 60)
-                    .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.secondary.opacity(0.3), lineWidth: 1))
+                    .monospacedEditorBorder(minHeight: 60)
                 }
             }
         }
@@ -519,11 +499,11 @@ private struct AddMCPServerSheet: View {
                     .textFieldStyle(.roundedBorder)
             }
 
-            HStack {
-                Spacer()
-                Button("Cancel") { isPresented = false }
-                    .keyboardShortcut(.cancelAction)
-                Button("Add") {
+            DialogActionButtons(
+                confirmLabel: "Add",
+                confirmDisabled: !addEnabled,
+                onCancel: { isPresented = false },
+                onConfirm: {
                     let transport: MCPTransportConfig
                     if transportType == "stdio" {
                         let args = stdioArguments
@@ -538,9 +518,7 @@ private struct AddMCPServerSheet: View {
                     _ = environment.addMCPServer(displayName: name, transport: transport)
                     isPresented = false
                 }
-                .keyboardShortcut(.defaultAction)
-                .disabled(!addEnabled)
-            }
+            )
         }
         .padding(20)
         .frame(width: 480)
