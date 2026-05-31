@@ -837,15 +837,27 @@ final class AppEnvironment {
         // otherwise the detail keeps rendering a now-deleted id and shows a
         // stray spinner. Check both fields so it works however selection was set.
         let wasShowing = sidebarSelection == .conversation(id) || selectedConversationID == id
-        conversations.removeAll { $0.id == id }
+        // Clear selection BEFORE removing the row when deleting the selected one.
+        // The sidebar is List(selection: $sidebarSelection) — a two-way binding —
+        // so mutating `conversations` AND re-pointing `sidebarSelection` to a new
+        // row in the SAME @Observable update coalesces into one diff where the
+        // selection re-anchors and the removal of the selected row silently fails
+        // to commit. That's why deleting the selected (top) chat did nothing while
+        // non-selected (bottom) rows deleted fine. Nil-ing selection first removes
+        // the competing write so the removal commits cleanly.
         if wasShowing {
-            // Select the next nearest conversation, or land on the empty placeholder.
-            if let next = conversations.first {
-                selectedConversationID = next.id
-                sidebarSelection = .conversation(next.id)
-            } else {
-                selectedConversationID = nil
-                sidebarSelection = nil
+            selectedConversationID = nil
+            sidebarSelection = nil
+        }
+        conversations.removeAll { $0.id == id }
+        // Re-select the nearest remaining chat as a SEPARATE update (next tick)
+        // so the List has settled the deletion before it re-anchors selection.
+        if wasShowing, let next = conversations.first {
+            let nextID = next.id
+            Task { @MainActor in
+                guard self.conversations.contains(where: { $0.id == nextID }) else { return }
+                self.selectedConversationID = nextID
+                self.sidebarSelection = .conversation(nextID)
             }
         }
     }
