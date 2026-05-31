@@ -36,6 +36,9 @@ final class AppEnvironment {
     /// token cost.
     let webFetchCache: WebFetchCache
     let searchProvider: any WebSearchProvider
+    /// Read-only Contacts access for the `contacts_search` tool. Concrete
+    /// `CNContactStore`-backed; the TCC prompt is triggered from Settings → Tools.
+    let contactsProvider: any ContactsProvider
     let stateStore: AppStateStore
     var providerRecords: [ProviderRecord] {
         didSet { scheduleSave() }
@@ -176,6 +179,7 @@ final class AppEnvironment {
         self.ingestor = FileIngestor(pageExtractor: pageExtractor)
         self.webFetchCache = WebFetchCache()
         self.searchProvider = DuckDuckGoProvider()
+        self.contactsProvider = CNContactsProvider()
         self.stateStore = AppStateStore()
         self.skillStore = SkillStore()
         // Restore from disk if present; otherwise fall back to defaults.
@@ -406,12 +410,22 @@ final class AppEnvironment {
         let runCode = RunCodeTool(accessor: {
             ChatTaskContext.enabledSkills.map { .init(name: $0.name, directory: $0.directory) }
         })
+        // contacts_search is opt-in (not in defaultEnabledTools); enabling it in
+        // Settings → Tools triggers the macOS Contacts permission prompt.
+        let contacts = ContactsSearchTool(provider: contactsProvider)
         await toolRegistry.register(webSearch)
         await toolRegistry.register(webFetch)
         await toolRegistry.register(rag)
         await toolRegistry.register(currentTime)
         await toolRegistry.register(makeChart)
         await toolRegistry.register(runCode)
+        await toolRegistry.register(contacts)
+    }
+
+    /// Trigger the macOS Contacts TCC permission prompt (when not yet decided).
+    /// Called when the user enables the Contacts tool in Settings → Tools.
+    func requestContactsAccess() {
+        Task { _ = await contactsProvider.requestAccess() }
     }
 
     static func defaultProviders() -> [ProviderRecord] {

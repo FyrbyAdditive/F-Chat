@@ -5613,6 +5613,52 @@
           }
         }
       }
+    },
+    "Search Contacts": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search Contacts"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sök kontakter"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Søg kontakter"
+          }
+        }
+      }
+    },
+    "Lets the model look up your macOS Contacts (read-only — it never changes them). Off by default; enabling it asks macOS for Contacts permission.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lets the model look up your macOS Contacts (read-only — it never changes them). Off by default; enabling it asks macOS for Contacts permission."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Låter modellen slå upp dina macOS-kontakter (skrivskyddat — det ändrar dem aldrig). Av som standard; att aktivera det ber macOS om behörighet till Kontakter."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lader modellen slå dine macOS-kontakter op (skrivebeskyttet — det ændrer dem aldrig). Slået fra som standard; aktivering beder macOS om tilladelse til Kontakter."
+          }
+        }
+      }
     }
   }
 }

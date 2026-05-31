@@ -16,5 +16,14 @@
     <true/>
     <key>com.apple.security.cs.allow-dyld-environment-variables</key>
     <true/>
+
+    <!-- Read access to the user's Contacts for the (opt-in, read-only)
+         contacts_search tool. Under the hardened runtime this resource-access
+         entitlement is required to reach Contacts even though the app is not
+         sandboxed; without it requestAccess() is denied (CNError 100) before
+         the TCC prompt can appear. Pairs with NSContactsUsageDescription in
+         Info.plist + the runtime CNContactStore.requestAccess prompt. -->
+    <key>com.apple.security.personal-information.addressbook</key>
+    <true/>
 </dict>
 </plist>

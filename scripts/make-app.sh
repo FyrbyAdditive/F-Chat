@@ -151,6 +151,8 @@ cat >"$APP_DIR/Contents/Info.plist" <<'PLIST'
     <string>public.app-category.productivity</string>
     <key>LSMinimumSystemVersion</key>
     <string>26.0</string>
+    <key>NSContactsUsageDescription</key>
+    <string>F-Chat can look up your Contacts (read-only) when you ask the assistant about a person — for example to find someone's email or phone number. F-Chat never changes your contacts, and this is only used when you enable the Contacts tool.</string>
     <key>NSHighResolutionCapable</key>
     <true/>
     <key>NSPrincipalClass</key>

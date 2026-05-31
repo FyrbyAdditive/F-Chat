@@ -457,6 +457,13 @@ private struct ToolsTab: View {
                     title: "Make chart",
                     description: "Lets the model render a bar, line, or pie chart inline in the chat. Off by default; enable when you want visual data displays."
                 )
+                ToolToggleRow(
+                    environment: environment,
+                    name: "contacts_search",
+                    title: "Search Contacts",
+                    description: "Lets the model look up your macOS Contacts (read-only — it never changes them). Off by default; enabling it asks macOS for Contacts permission.",
+                    onEnable: { environment.requestContactsAccess() }
+                )
             } header: {
                 Text("Built-in tools")
             } footer: {
@@ -474,13 +481,20 @@ private struct ToolToggleRow: View {
     let name: String
     let title: LocalizedStringKey
     let description: LocalizedStringKey
+    /// Optional side-effect fired when the toggle is switched ON (e.g. the
+    /// Contacts tool requests the macOS permission). Nil for plain tools.
+    var onEnable: (() -> Void)? = nil
 
     var body: some View {
         Toggle(isOn: Binding(
             get: { environment.enabledTools.contains(name) },
             set: { isOn in
-                if isOn { environment.enabledTools.insert(name) }
-                else { environment.enabledTools.remove(name) }
+                if isOn {
+                    environment.enabledTools.insert(name)
+                    onEnable?()
+                } else {
+                    environment.enabledTools.remove(name)
+                }
             }
         )) {
             VStack(alignment: .leading, spacing: 2) {
