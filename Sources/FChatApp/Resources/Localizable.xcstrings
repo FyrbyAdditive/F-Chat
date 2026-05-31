@@ -5913,6 +5913,30 @@
         }
       }
     },
+    "Allow changes": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Allow changes" } },
+        "sv": { "stringUnit": { "state": "translated", "value": "Tillåt ändringar" } },
+        "da": { "stringUnit": { "state": "translated", "value": "Tillad ændringer" } }
+      }
+    },
+    "Propose adding, editing, or deleting events — you confirm each change.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Propose adding, editing, or deleting events — you confirm each change." } },
+        "sv": { "stringUnit": { "state": "translated", "value": "Föreslå att lägga till, ändra eller ta bort händelser — du bekräftar varje ändring." } },
+        "da": { "stringUnit": { "state": "translated", "value": "Foreslå at tilføje, ændre eller slette hændelser — du bekræfter hver ændring." } }
+      }
+    },
+    "Propose adding, editing, deleting, or completing reminders — you confirm each change.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Propose adding, editing, deleting, or completing reminders — you confirm each change." } },
+        "sv": { "stringUnit": { "state": "translated", "value": "Föreslå att lägga till, ändra, ta bort eller slutföra påminnelser — du bekräftar varje ändring." } },
+        "da": { "stringUnit": { "state": "translated", "value": "Foreslå at tilføje, ændre, slette eller fuldføre påmindelser — du bekræfter hver ændring." } }
+      }
+    },
     "Maps": {
       "extractionState": "manual",
       "localizations": {

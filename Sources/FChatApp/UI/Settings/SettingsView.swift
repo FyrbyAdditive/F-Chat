@@ -456,26 +456,28 @@ private struct ToolsTab: View {
                         name: "calendar",
                         title: "Calendar",
                         description: "Lets the model read your Calendar (e.g. “what's on this week?”). Off by default; enabling it asks macOS for Calendar permission.",
-                        onEnable: { environment.requestCalendarAccess() }
-                    )
-                    ToolToggleRow(
-                        environment: environment,
-                        name: "calendar_write",
-                        title: "Allow calendar changes",
-                        description: "Lets the model PROPOSE adding, editing, or deleting calendar events. Every change is shown for you to confirm before it happens. Requires the Calendar tool above."
+                        onEnable: { environment.requestCalendarAccess() },
+                        children: [
+                            ToolChild(
+                                name: "calendar_write",
+                                title: "Allow changes",
+                                description: "Propose adding, editing, or deleting events — you confirm each change."
+                            )
+                        ]
                     )
                     ToolToggleRow(
                         environment: environment,
                         name: "reminders",
                         title: "Reminders",
                         description: "Lets the model read your Reminders (e.g. “what's on my list?”). Off by default; enabling it asks macOS for Reminders permission.",
-                        onEnable: { environment.requestReminderAccess() }
-                    )
-                    ToolToggleRow(
-                        environment: environment,
-                        name: "reminders_write",
-                        title: "Allow reminder changes",
-                        description: "Lets the model PROPOSE adding, editing, deleting, or completing reminders. Every change is shown for you to confirm before it happens. Requires the Reminders tool above."
+                        onEnable: { environment.requestReminderAccess() },
+                        children: [
+                            ToolChild(
+                                name: "reminders_write",
+                                title: "Allow changes",
+                                description: "Propose adding, editing, deleting, or completing reminders — you confirm each change."
+                            )
+                        ]
                     )
                     ToolToggleRow(
                         environment: environment,
@@ -535,6 +537,15 @@ private struct ToolsTab: View {
     }
 }
 
+/// A toggle subordinate to a parent tool (e.g. "Allow changes" under Calendar).
+/// Rendered as an indented sub-row, and only shown while the parent is enabled.
+private struct ToolChild {
+    let name: String
+    let title: LocalizedStringKey
+    let description: LocalizedStringKey
+    var onEnable: (() -> Void)? = nil
+}
+
 private struct ToolToggleRow: View {
     @Bindable var environment: AppEnvironment
     let name: String
@@ -543,16 +554,25 @@ private struct ToolToggleRow: View {
     /// Optional side-effect fired when the toggle is switched ON (e.g. the
     /// Contacts tool requests the macOS permission). Nil for plain tools.
     var onEnable: (() -> Void)? = nil
+    /// Sub-toggles that modify this tool (e.g. its write permission). They are
+    /// only shown while this parent tool is enabled, and are cleared when the
+    /// parent is turned off so a disabled tool never keeps an orphaned flag on.
+    var children: [ToolChild] = []
+
+    private var isOn: Bool { environment.enabledTools.contains(name) }
 
     var body: some View {
         Toggle(isOn: Binding(
-            get: { environment.enabledTools.contains(name) },
-            set: { isOn in
-                if isOn {
+            get: { isOn },
+            set: { on in
+                if on {
                     environment.enabledTools.insert(name)
                     onEnable?()
                 } else {
                     environment.enabledTools.remove(name)
+                    // Disabling the parent clears its children so they don't
+                    // linger as enabled-but-inert flags.
+                    for child in children { environment.enabledTools.remove(child.name) }
                 }
             }
         )) {
@@ -561,6 +581,37 @@ private struct ToolToggleRow: View {
                 Text(description)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
+            }
+        }
+
+        // Indented child rows, only while the parent is enabled.
+        if isOn {
+            ForEach(children, id: \.name) { child in
+                Toggle(isOn: Binding(
+                    get: { environment.enabledTools.contains(child.name) },
+                    set: { on in
+                        if on {
+                            environment.enabledTools.insert(child.name)
+                            child.onEnable?()
+                        } else {
+                            environment.enabledTools.remove(child.name)
+                        }
+                    }
+                )) {
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        Image(systemName: "arrow.turn.down.right")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(child.title)
+                                .font(.callout)
+                            Text(child.description)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                .padding(.leading, 20)
             }
         }
     }
