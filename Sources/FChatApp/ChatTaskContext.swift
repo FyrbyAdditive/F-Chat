@@ -25,6 +25,10 @@ enum ChatTaskContext {
     /// on. The shared `CalendarTool` reads this so it only stages write
     /// proposals when writes are enabled, scoped per-turn like the above.
     @TaskLocal static var calendarWritesAllowed: Bool = false
+    /// Whether the chat that initiated this turn has "Allow reminder changes"
+    /// on. The shared `RemindersTool` reads this so it only stages write
+    /// proposals when writes are enabled, scoped per-turn like the above.
+    @TaskLocal static var reminderWritesAllowed: Bool = false
 }
 
 /// A per-turn reference to an enabled skill: its name and unpacked directory.

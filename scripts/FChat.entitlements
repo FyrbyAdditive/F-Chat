@@ -33,5 +33,13 @@
          NSCalendarsFullAccessUsageDescription in Info.plist. -->
     <key>com.apple.security.personal-information.calendars</key>
     <true/>
+
+    <!-- Reminders access for the (opt-in) reminders tool. Same hardened-runtime
+         requirement: without this entitlement EventKit's
+         requestFullAccessToReminders() is denied before the TCC prompt can
+         appear, even though the app is non-sandboxed. Pairs with
+         NSRemindersFullAccessUsageDescription in Info.plist. -->
+    <key>com.apple.security.personal-information.reminders</key>
+    <true/>
 </dict>
 </plist>

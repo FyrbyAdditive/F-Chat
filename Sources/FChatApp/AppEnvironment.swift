@@ -49,6 +49,15 @@ final class AppEnvironment {
     /// Surfaced to the chat after a confirmed/declined write so the transcript can
     /// note the outcome. nil = no recent result to show.
     var lastCalendarWriteResult: String?
+    /// Read + (confirmed) write Reminders access for the `reminders` tool.
+    let reminderProvider: any ReminderProvider
+    /// A reminder change the model proposed, awaiting the user's confirmation in
+    /// the chat. nil = nothing pending. Drives the confirm dialog in ChatDetailView.
+    var pendingReminderWrite: ReminderWriteProposal? {
+        didSet { /* not persisted — session-only confirmation state */ }
+    }
+    /// Surfaced to the chat after a confirmed/declined reminder write.
+    var lastReminderWriteResult: String?
     let stateStore: AppStateStore
     var providerRecords: [ProviderRecord] {
         didSet { scheduleSave() }
@@ -191,6 +200,7 @@ final class AppEnvironment {
         self.searchProvider = DuckDuckGoProvider()
         self.contactsProvider = CNContactsProvider()
         self.calendarProvider = EKCalendarProvider()
+        self.reminderProvider = EKReminderProvider()
         self.stateStore = AppStateStore()
         self.skillStore = SkillStore()
         // Restore from disk if present; otherwise fall back to defaults.
@@ -435,6 +445,15 @@ final class AppEnvironment {
                 Task { @MainActor in self?.pendingCalendarWrite = proposal }
             }
         )
+        // reminders: same pattern as calendar — reads immediately; writes gated by
+        // the live `reminders_write` toggle and staged for user confirmation.
+        let reminders = RemindersTool(
+            provider: reminderProvider,
+            allowWrites: { ChatTaskContext.reminderWritesAllowed },
+            stageWrite: { [weak self] proposal in
+                Task { @MainActor in self?.pendingReminderWrite = proposal }
+            }
+        )
         await toolRegistry.register(webSearch)
         await toolRegistry.register(webFetch)
         await toolRegistry.register(rag)
@@ -443,6 +462,7 @@ final class AppEnvironment {
         await toolRegistry.register(runCode)
         await toolRegistry.register(contacts)
         await toolRegistry.register(calendar)
+        await toolRegistry.register(reminders)
     }
 
     /// Trigger the macOS Contacts TCC permission prompt (when not yet decided).
@@ -488,6 +508,44 @@ final class AppEnvironment {
             lastCalendarWriteResult = "Calendar change cancelled: \(proposal.summary)"
         }
         pendingCalendarWrite = nil
+    }
+
+    /// Trigger the macOS Reminders (full-access) permission prompt when the user
+    /// enables the Reminders tool in Settings → Tools.
+    func requestReminderAccess() {
+        Task { _ = await reminderProvider.requestAccess() }
+    }
+
+    /// Commit the pending reminder write proposal (user tapped Confirm).
+    func confirmPendingReminderWrite() async {
+        guard let proposal = pendingReminderWrite else { return }
+        pendingReminderWrite = nil
+        do {
+            try await reminderProvider.commit(proposal)
+            lastReminderWriteResult = "Reminders updated: \(proposal.summary)"
+        } catch {
+            lastReminderWriteResult = "Reminder change failed: \(error.localizedDescription)"
+        }
+    }
+
+    /// Commit a specific proposal directly — used by the confirm dialog, which
+    /// captures the proposal at button-tap time so the dialog's dismiss handler
+    /// (which clears `pendingReminderWrite`) can't race the commit to nil.
+    func commitReminderWrite(_ proposal: ReminderWriteProposal) async {
+        do {
+            try await reminderProvider.commit(proposal)
+            lastReminderWriteResult = "Reminders updated: \(proposal.summary)"
+        } catch {
+            lastReminderWriteResult = "Reminder change failed: \(error.localizedDescription)"
+        }
+    }
+
+    /// Discard the pending reminder write (user tapped Cancel).
+    func cancelPendingReminderWrite() {
+        if let proposal = pendingReminderWrite {
+            lastReminderWriteResult = "Reminder change cancelled: \(proposal.summary)"
+        }
+        pendingReminderWrite = nil
     }
 
     static func defaultProviders() -> [ProviderRecord] {

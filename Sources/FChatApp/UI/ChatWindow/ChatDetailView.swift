@@ -95,5 +95,25 @@ struct ChatDetailView: View {
         } message: { _ in
             Text("The assistant proposed this change. It will only happen if you confirm.")
         }
+        // Same stage-and-confirm pattern for the reminders tool.
+        .confirmationDialog(
+            environment.pendingReminderWrite?.summary ?? "Confirm reminder change?",
+            isPresented: Binding(
+                get: { environment.pendingReminderWrite != nil },
+                set: { _ in }
+            ),
+            titleVisibility: .visible,
+            presenting: environment.pendingReminderWrite
+        ) { proposal in
+            Button("Confirm", role: proposal.op == .delete ? .destructive : nil) {
+                environment.pendingReminderWrite = nil
+                Task { await environment.commitReminderWrite(proposal) }
+            }
+            Button("Cancel", role: .cancel) {
+                environment.cancelPendingReminderWrite()
+            }
+        } message: { _ in
+            Text("The assistant proposed this change. It will only happen if you confirm.")
+        }
     }
 }

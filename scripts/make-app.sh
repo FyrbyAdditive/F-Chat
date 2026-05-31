@@ -155,6 +155,8 @@ cat >"$APP_DIR/Contents/Info.plist" <<'PLIST'
     <string>F-Chat can look up your Contacts (read-only) when you ask the assistant about a person — for example to find someone's email or phone number. F-Chat never changes your contacts, and this is only used when you enable the Contacts tool.</string>
     <key>NSCalendarsFullAccessUsageDescription</key>
     <string>F-Chat can read your Calendar to answer questions about your schedule, and — only when you turn on calendar changes and confirm each one — propose adding, editing, or deleting events. This is used only when you enable the Calendar tool.</string>
+    <key>NSRemindersFullAccessUsageDescription</key>
+    <string>F-Chat can read your Reminders to answer questions about your to-dos, and — only when you turn on reminder changes and confirm each one — propose adding, editing, deleting, or completing reminders. This is used only when you enable the Reminders tool.</string>
     <key>NSHighResolutionCapable</key>
     <true/>
     <key>NSPrincipalClass</key>

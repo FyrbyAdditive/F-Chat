@@ -5752,6 +5752,121 @@
         }
       }
     },
+    "Reminders": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reminders"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Påminnelser"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Påmindelser"
+          }
+        }
+      }
+    },
+    "Lets the model read your Reminders (e.g. “what's on my list?”). Off by default; enabling it asks macOS for Reminders permission.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lets the model read your Reminders (e.g. “what's on my list?”). Off by default; enabling it asks macOS for Reminders permission."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Låter modellen läsa dina påminnelser (t.ex. ”vad står på min lista?”). Av som standard; att aktivera det ber macOS om behörighet till Påminnelser."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lader modellen læse dine påmindelser (f.eks. ”hvad står på min liste?”). Slået fra som standard; aktivering beder macOS om tilladelse til Påmindelser."
+          }
+        }
+      }
+    },
+    "Allow reminder changes": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allow reminder changes"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tillåt påminnelseändringar"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tillad påmindelsesændringer"
+          }
+        }
+      }
+    },
+    "Lets the model PROPOSE adding, editing, deleting, or completing reminders. Every change is shown for you to confirm before it happens. Requires the Reminders tool above.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lets the model PROPOSE adding, editing, deleting, or completing reminders. Every change is shown for you to confirm before it happens. Requires the Reminders tool above."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Låter modellen FÖRESLÅ att lägga till, ändra, ta bort eller slutföra påminnelser. Varje ändring visas för dig att bekräfta innan den sker. Kräver påminnelseverktyget ovan."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lader modellen FORESLÅ at tilføje, ændre, slette eller fuldføre påmindelser. Hver ændring vises, så du kan bekræfte den, før den sker. Kræver påmindelsesværktøjet ovenfor."
+          }
+        }
+      }
+    },
+    "Confirm reminder change?": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confirm reminder change?"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bekräfta påminnelseändring?"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bekræft påmindelsesændring?"
+          }
+        }
+      }
+    },
     "Confirm": {
       "extractionState": "manual",
       "localizations": {

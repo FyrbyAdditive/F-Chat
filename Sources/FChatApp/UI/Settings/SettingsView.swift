@@ -477,6 +477,19 @@ private struct ToolsTab: View {
                     title: "Allow calendar changes",
                     description: "Lets the model PROPOSE adding, editing, or deleting calendar events. Every change is shown for you to confirm before it happens. Requires the Calendar tool above."
                 )
+                ToolToggleRow(
+                    environment: environment,
+                    name: "reminders",
+                    title: "Reminders",
+                    description: "Lets the model read your Reminders (e.g. “what's on my list?”). Off by default; enabling it asks macOS for Reminders permission.",
+                    onEnable: { environment.requestReminderAccess() }
+                )
+                ToolToggleRow(
+                    environment: environment,
+                    name: "reminders_write",
+                    title: "Allow reminder changes",
+                    description: "Lets the model PROPOSE adding, editing, deleting, or completing reminders. Every change is shown for you to confirm before it happens. Requires the Reminders tool above."
+                )
             } header: {
                 Text("Built-in tools")
             } footer: {
