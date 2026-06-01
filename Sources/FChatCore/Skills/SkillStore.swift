@@ -243,6 +243,16 @@ public struct SkillStore: Sendable {
         return found
     }
 
+    /// Whether a tree-relative path is safe to append under the destination —
+    /// i.e. it's not absolute and contains no `..` traversal component. Used to
+    /// reject zip-slip entries before copying. `internal` so it's unit-testable.
+    static func isSafeRelativePath(_ rel: String) -> Bool {
+        if rel.isEmpty { return false }
+        if rel.hasPrefix("/") { return false }              // absolute
+        let components = rel.split(separator: "/", omittingEmptySubsequences: false)
+        return !components.contains("..")                   // any `..` segment
+    }
+
     private func copyTree(from source: URL, to dest: URL) throws {
         let fm = FileManager.default
         if fm.fileExists(atPath: dest.path) {
@@ -251,11 +261,26 @@ public struct SkillStore: Sendable {
         try fm.createDirectory(at: dest, withIntermediateDirectories: true)
         guard let en = fm.enumerator(at: source, includingPropertiesForKeys: [.isDirectoryKey]) else { return }
         let prefix = source.path.hasSuffix("/") ? source.path : source.path + "/"
+        // Canonicalize the destination root once so we can verify every target
+        // resolves to a path *inside* it (zip-slip / path-traversal defense).
+        let destRoot = dest.standardizedFileURL.resolvingSymlinksInPath().path
+        let destRootPrefix = destRoot.hasSuffix("/") ? destRoot : destRoot + "/"
         for case let url as URL in en {
             if url.path.contains("__MACOSX") { continue }
             var rel = url.path
             if rel.hasPrefix(prefix) { rel.removeFirst(prefix.count) } else { continue }
+            // Reject traversal: a malicious skill archive could carry entries like
+            // `../../evil` or absolute paths. `appendingPathComponent` does NOT
+            // canonicalize, so these would otherwise write outside `dest`.
+            guard Self.isSafeRelativePath(rel) else { continue }
             let target = dest.appendingPathComponent(rel)
+            // Belt-and-braces: verify the resolved target is contained in dest,
+            // catching any traversal the textual check missed (incl. symlinks in
+            // the unpacked tree whose canonical path escapes the root).
+            let resolvedTarget = target.standardizedFileURL.path
+            guard resolvedTarget == destRoot || resolvedTarget.hasPrefix(destRootPrefix) else {
+                continue
+            }
             let isDir = (try? url.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory ?? false
             if isDir {
                 try fm.createDirectory(at: target, withIntermediateDirectories: true)

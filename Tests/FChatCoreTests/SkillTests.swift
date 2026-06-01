@@ -211,6 +211,82 @@ struct SkillStoreTests {
         store.deleteSkill(skill.id)
         #expect(!FileManager.default.fileExists(atPath: store.skillRootDirectory(for: skill.id).path))
     }
+
+    // MARK: - Zip-slip / path-traversal
+
+    // Fast unit check of the path-safety predicate. (Not sufficient on its own —
+    // see the end-to-end test below, which is what actually proves the security
+    // property through the real import pipeline.)
+    @Test func safeRelativePathsAccepted() {
+        for ok in ["SKILL.md", "scripts/hello.sh", "a/b/c.txt", "with..dots/x", "..hidden"] {
+            #expect(SkillStore.isSafeRelativePath(ok), "expected \(ok) to be allowed")
+        }
+    }
+
+    @Test func traversalRelativePathsRejected() {
+        for bad in ["..", "../evil", "../../etc/passwd", "a/../../escape",
+                    "scripts/../../x", "a/..", "/etc/passwd", "/abs", ""] {
+            #expect(!SkillStore.isSafeRelativePath(bad), "expected \(bad) to be rejected")
+        }
+    }
+
+    /// The real test: hand-author a malicious zip whose central directory holds a
+    /// traversal entry (`../../<sentinel>`) — a real zip can store any path
+    /// string; only extraction sanitizes — import it through the actual
+    /// `importSkill(fromZip:)` pipeline, and assert NOTHING was written outside
+    /// the store root. Verifies the end-to-end property, not just a helper.
+    @Test func maliciousZipCannotEscapeStoreRoot() throws {
+        // A unique sandbox dir to detect any escape. The store root is a
+        // subdirectory of it; the malicious entry tries to climb above the root.
+        let sandbox = FileManager.default.temporaryDirectory
+            .appendingPathComponent("fchat-zipslip-\(UUID().uuidString)", isDirectory: true)
+        let storeRoot = sandbox.appendingPathComponent("store", isDirectory: true)
+        try FileManager.default.createDirectory(at: storeRoot, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: sandbox) }
+
+        let store = SkillStore(rootDirectory: storeRoot)
+
+        // Build the malicious archive.
+        let zipURL = sandbox.appendingPathComponent("evil-\(UUID().uuidString).zip")
+        let archive = try Archive(url: zipURL, accessMode: .create)
+        let manifest = Data("---\nname: evil\ndescription: A malicious skill.\n---\nx".utf8)
+        try archive.addEntry(with: "SKILL.md", type: .file,
+                             uncompressedSize: Int64(manifest.count),
+                             provider: { pos, size in
+            manifest.subdata(in: Int(pos)..<Int(pos) + size)
+        })
+        // The attack: a deep traversal that would land well above the store root.
+        let sentinel = Data("PWNED".utf8)
+        let traversalPath = "../../../../../../../../tmp/fchat-zipslip-escape-\(UUID().uuidString).txt"
+        try archive.addEntry(with: traversalPath, type: .file,
+                             uncompressedSize: Int64(sentinel.count),
+                             provider: { pos, size in
+            sentinel.subdata(in: Int(pos)..<Int(pos) + size)
+        })
+
+        // Import may succeed (SKILL.md is valid) or throw — either is fine. What
+        // matters is that the traversal entry did NOT escape the store root.
+        _ = try? store.importSkill(fromZip: zipURL)
+
+        // 1) The literal /tmp escape target must not exist.
+        let escapeName = (traversalPath as NSString).lastPathComponent
+        let escapeTarget = URL(fileURLWithPath: "/tmp").appendingPathComponent(escapeName)
+        #expect(!FileManager.default.fileExists(atPath: escapeTarget.path),
+                "traversal entry escaped to /tmp")
+
+        // 2) Walk the whole sandbox; every regular file must live inside the
+        //    store root (nothing escaped above it).
+        let storeRootResolved = storeRoot.standardizedFileURL.resolvingSymlinksInPath().path
+        if let en = FileManager.default.enumerator(at: sandbox, includingPropertiesForKeys: [.isRegularFileKey]) {
+            for case let f as URL in en {
+                let isFile = (try? f.resourceValues(forKeys: [.isRegularFileKey]))?.isRegularFile ?? false
+                guard isFile, f.pathExtension != "zip" else { continue }
+                let p = f.standardizedFileURL.resolvingSymlinksInPath().path
+                #expect(p.hasPrefix(storeRootResolved),
+                        "a file was written outside the store root: \(p)")
+            }
+        }
+    }
 }
 
 @Suite("Skill persistence")
