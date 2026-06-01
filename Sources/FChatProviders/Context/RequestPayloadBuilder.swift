@@ -339,9 +339,7 @@ public struct RequestPayloadBuilder: Sendable {
 
     private func clearedPlaceholderJSON(callID: String, originalTokens: Int) -> String {
         // Escape the call_id defensively though they're already opaque strings.
-        let safeCallID = callID
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "\"", with: "\\\"")
+        let safeCallID = callID.escapedForJSON()
         return "{\"_fchat_cleared\":true,\"call_id\":\"\(safeCallID)\",\"original_tokens\":\(originalTokens),\"hint\":\"This tool result was cleared by F-Chat to save context. Re-call the tool with the same arguments to refetch.\"}"
     }
 }

@@ -100,23 +100,23 @@ public struct RunCodeTool: Tool {
         let trimmed = arguments.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let data = (trimmed.isEmpty ? "{}" : trimmed).data(using: .utf8),
               let args = try? JSONDecoder().decode(Args.self, from: data) else {
-            return error("Could not parse arguments. Expected {skill, language, code}.")
+            return errorOutput("Could not parse arguments. Expected {skill, language, code}.")
         }
         let (skills, skillNames) = resolved()
         guard let dir = skills[args.skill] else {
             let available = skillNames.isEmpty ? "none" : skillNames.joined(separator: ", ")
-            return error("Unknown or disabled skill \"\(args.skill)\". Available: \(available).")
+            return errorOutput("Unknown or disabled skill \"\(args.skill)\". Available: \(available).")
         }
         guard let language = CodeSandbox.Language(rawValue: args.language.lowercased()) else {
-            return error("Unsupported language \"\(args.language)\". Use \"bash\" or \"python\".")
+            return errorOutput("Unsupported language \"\(args.language)\". Use \"bash\" or \"python\".")
         }
         do {
             let result = try await sandbox.run(language: language, code: args.code, workingDirectory: dir)
             return success(result)
         } catch let e as CodeSandbox.SandboxError {
-            return error(e.description)
+            return errorOutput(e.description)
         } catch {
-            return self.error("Sandbox failure: \(error.localizedDescription)")
+            return errorOutput("Sandbox failure: \(error.localizedDescription)")
         }
     }
 
@@ -133,9 +133,5 @@ public struct RunCodeTool: Tool {
         let json = (try? JSONSerialization.data(withJSONObject: obj))
             .flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
         return ToolOutput(outputJSON: json, isError: false, display: .markdown)
-    }
-
-    private func error(_ message: String) -> ToolOutput {
-        ToolOutput(outputJSON: "{\"error\":\"\(message.escapedForJSON())\"}", isError: true, display: .markdown)
     }
 }

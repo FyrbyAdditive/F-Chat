@@ -221,10 +221,6 @@ public struct MapsTool: Tool {
         }
     }
 
-    private func errorOutput(_ message: String) -> ToolOutput {
-        ToolOutput(outputJSON: #"{"error":"\#(message.escapedForJSONInline())"}"#, isError: true, display: .markdown)
-    }
-
     private static func km(_ meters: Double) -> String {
         if meters < 1000 { return "\(Int(meters.rounded())) m" }
         return String(format: "%.1f km", meters / 1000)

@@ -80,18 +80,11 @@ public actor ToolRegistry {
                 return result
             }
         } catch let error as ToolInvocationError {
-            let payload = #"{"error":"\#(escape(String(describing: error)))"}"#
+            let payload = #"{"error":"\#(String(describing: error).escapedForJSONInline())"}"#
             return ToolOutput(outputJSON: payload, isError: true)
         } catch {
-            let payload = #"{"error":"\#(escape(error.localizedDescription))"}"#
+            let payload = #"{"error":"\#(error.localizedDescription.escapedForJSONInline())"}"#
             return ToolOutput(outputJSON: payload, isError: true)
         }
-    }
-
-    private static func escape(_ text: String) -> String {
-        text
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "\"", with: "\\\"")
-            .replacingOccurrences(of: "\n", with: " ")
     }
 }

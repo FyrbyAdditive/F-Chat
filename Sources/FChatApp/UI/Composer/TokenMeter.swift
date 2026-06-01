@@ -62,7 +62,7 @@ struct TokenMeter: View {
         guard let projection, let budget else { return "—" }
         // Denominator stays as the full window so users see the honest
         // model maximum; colour and helpText explain the reserve.
-        return "\(formatTokens(projection.totalTokens)) / \(formatTokens(budget.effectiveWindow))"
+        return "\(projection.totalTokens.tokenCountLabel) / \(budget.effectiveWindow.tokenCountLabel)"
     }
 
     private var helpText: String {
@@ -89,16 +89,6 @@ struct TokenMeter: View {
         }
     }
 
-    private func formatTokens(_ count: Int) -> String {
-        if count >= 1000 {
-            let value = Double(count) / 1000
-            if value >= 100 {
-                return "\(Int(value))k"
-            }
-            return String(format: "%.1fk", value)
-        }
-        return "\(count)"
-    }
 }
 
 struct TokenMeterPopover: View {

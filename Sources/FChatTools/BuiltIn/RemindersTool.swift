@@ -196,10 +196,6 @@ public struct RemindersTool: Tool {
 
     // MARK: - Helpers
 
-    private func errorOutput(_ message: String) -> ToolOutput {
-        ToolOutput(outputJSON: #"{"error":"\#(message.escapedForJSONInline())"}"#, isError: true, display: .markdown)
-    }
-
     /// Parse a due date the model supplied, returning the instant and whether it
     /// carries a time of day. A plain `yyyy-MM-dd` is a whole-day reminder
     /// (hasTime=false); anything with a time component is timed (hasTime=true).
@@ -211,27 +207,9 @@ public struct RemindersTool: Tool {
         return (date, hasTime)
     }
 
-    /// Parse a date the model supplied. Accepts full ISO-8601 with a timezone,
-    /// ISO without a zone (interpreted in the user's local time — the common case),
-    /// and a plain `yyyy-MM-dd`.
-    static func isoDate(_ raw: String) -> Date? {
-        let s = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !s.isEmpty else { return nil }
-
-        let isoFrac = ISO8601DateFormatter(); isoFrac.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let d = isoFrac.date(from: s) { return d }
-        let iso = ISO8601DateFormatter(); iso.formatOptions = [.withInternetDateTime]
-        if let d = iso.date(from: s) { return d }
-
-        let local = DateFormatter()
-        local.locale = Locale(identifier: "en_US_POSIX")
-        local.timeZone = .current
-        for fmt in ["yyyy-MM-dd'T'HH:mm:ss", "yyyy-MM-dd'T'HH:mm", "yyyy-MM-dd HH:mm:ss", "yyyy-MM-dd HH:mm", "yyyy-MM-dd"] {
-            local.dateFormat = fmt
-            if let d = local.date(from: s) { return d }
-        }
-        return nil
-    }
+    /// Parse a model-supplied date. See `FlexibleISODate.parse` — accepts ISO
+    /// with/without timezone and plain `yyyy-MM-dd`.
+    static func isoDate(_ raw: String) -> Date? { FlexibleISODate.parse(raw) }
 
     /// Human-readable " — due …" suffix (with weekday) for a confirmation summary.
     private static func dueSuffix(_ due: Date?, _ hasTime: Bool, _ alarm: Bool) -> String {

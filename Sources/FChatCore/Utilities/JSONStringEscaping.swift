@@ -3,10 +3,12 @@
 
 import Foundation
 
-extension String {
+public extension String {
     /// Escape backslashes and double-quotes so the string can be embedded in a
-    /// hand-built JSON string literal. Built-in tools assemble small JSON error
-    /// payloads by interpolation, and they all need this exact escaping.
+    /// hand-built JSON string literal. Several places assemble small JSON
+    /// payloads by interpolation (tool errors, temporal context, cleared-result
+    /// placeholders) and all need this exact escaping — so it lives in FChatCore
+    /// where every module can reach it.
     func escapedForJSON() -> String {
         replacingOccurrences(of: "\\", with: "\\\\")
             .replacingOccurrences(of: "\"", with: "\\\"")

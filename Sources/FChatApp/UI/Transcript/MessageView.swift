@@ -100,17 +100,9 @@ struct MessageView: View {
             }
         }
         if let ctx = contextTokens, ctx > 0 {
-            parts.append("context \(formatTokens(ctx))")
+            parts.append("context \(ctx.tokenCountLabel)")
         }
         return parts.joined(separator: " · ")
-    }
-
-    private func formatTokens(_ count: Int) -> String {
-        if count >= 1000 {
-            let v = Double(count) / 1000
-            return v >= 100 ? "\(Int(v))k" : String(format: "%.1fk", v)
-        }
-        return "\(count)"
     }
 
     private var roleBadge: some View {

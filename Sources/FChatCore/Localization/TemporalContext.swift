@@ -63,11 +63,7 @@ public struct TemporalContext: Sendable {
         let human = humanFormatter.string(from: date)
 
         let tzName = timeZone.identifier
-        let escape: (String) -> String = { s in
-            s.replacingOccurrences(of: "\\", with: "\\\\")
-                .replacingOccurrences(of: "\"", with: "\\\"")
-        }
-        return "{\"iso8601\":\"\(escape(iso))\",\"human\":\"\(escape(human))\",\"timezone\":\"\(escape(tzName))\"}"
+        return "{\"iso8601\":\"\(iso.escapedForJSON())\",\"human\":\"\(human.escapedForJSON())\",\"timezone\":\"\(tzName.escapedForJSON())\"}"
     }
 
     public func render() -> String {

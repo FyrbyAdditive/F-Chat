@@ -65,7 +65,7 @@ public struct MakeChartTool: Tool {
         let trimmed = arguments.trimmingCharacters(in: .whitespacesAndNewlines)
         let normalised = trimmed.isEmpty ? "{}" : trimmed
         guard let data = normalised.data(using: .utf8) else {
-            return error("Arguments not valid UTF-8.")
+            return errorOutput("Arguments not valid UTF-8.")
         }
         do {
             // Validate by parsing through our spec model. On success we
@@ -76,18 +76,10 @@ public struct MakeChartTool: Tool {
             let outputJSON = String(data: canonical, encoding: .utf8) ?? normalised
             return ToolOutput(outputJSON: outputJSON, isError: false, display: .chart)
         } catch let e as ChartSpec.ValidationError {
-            return error(e.message)
+            return errorOutput(e.message)
         } catch {
-            return self.error("Could not parse chart spec: \(error.localizedDescription)")
+            return errorOutput("Could not parse chart spec: \(error.localizedDescription)")
         }
-    }
-
-    private func error(_ message: String) -> ToolOutput {
-        ToolOutput(
-            outputJSON: "{\"error\":\"\(message.escapedForJSON())\"}",
-            isError: true,
-            display: .markdown
-        )
     }
 }
 
