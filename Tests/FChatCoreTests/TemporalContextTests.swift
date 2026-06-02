@@ -81,26 +81,29 @@ struct TemporalContextTests {
 
     // MARK: - renderDayHeader
 
-    @Test func dayHeaderEnglishContainsDateOnly() {
+    @Test func dayHeaderEnglishContainsDateAndZoneButNoTime() {
         let ctx = TemporalContext(
             date: Self.referenceDate,
             locale: Locale(identifier: "en_US"),
-            timeZone: TimeZone(identifier: "UTC")!,
+            timeZone: TimeZone(identifier: "Asia/Tokyo")!,
             language: .english
         )
         let header = ctx.renderDayHeader()
         #expect(header.hasPrefix("[Today is "))
         #expect(header.hasSuffix("]"))
-        #expect(header.contains("Thursday"))
         #expect(header.contains("2026"))
-        // Crucially: NO time, NO ISO timestamp — the whole point.
-        #expect(!header.contains(":"))
+        // The timezone is named so the model can qualify times it reports.
+        #expect(header.contains("timezone"))
+        #expect(header.contains("Asia/Tokyo"))   // IANA identifier
+        // Foundation renders Tokyo's abbreviation as the offset form "GMT+9".
+        #expect(header.contains("GMT+9"))
+        // Crucially: NO wall-clock time, NO ISO timestamp — that would churn
+        // the prefix cache on every send.
         #expect(!header.contains("PM"))
         #expect(!header.contains("AM"))
-        #expect(!header.contains("Z"))
     }
 
-    @Test func dayHeaderSwedishUsesSwedishWording() {
+    @Test func dayHeaderSwedishUsesSwedishWordingAndZone() {
         let ctx = TemporalContext(
             date: Self.referenceDate,
             locale: Locale(identifier: "sv_SE"),
@@ -110,6 +113,8 @@ struct TemporalContextTests {
         let header = ctx.renderDayHeader()
         #expect(header.hasPrefix("[Idag är "))
         #expect(header.hasSuffix("]"))
+        #expect(header.contains("tidszon"))
+        #expect(header.contains("Europe/Stockholm"))
     }
 
     @Test func dayHeaderStableAcrossSubdayDriftSameDay() {

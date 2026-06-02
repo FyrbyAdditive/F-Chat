@@ -27,23 +27,31 @@ public struct TemporalContext: Sendable {
     }
 
     /// Short day-bucketed header for inline prepend on user messages, e.g.
-    /// `"[Today is Tuesday, May 26, 2026]"`. Stable for the entire local-day
-    /// — calling this with two `date` values 30 minutes apart returns the
-    /// same string. That stability is what makes it safe to prepend to a
-    /// user message without invalidating any prefix cache: subsequent
-    /// re-sends of the same conversation produce byte-identical bytes for
-    /// every prior user turn.
+    /// `"[Today is Tuesday, May 26, 2026; timezone Europe/London (BST)]"`.
+    /// Stable for the entire local-day — calling this with two `date` values
+    /// 30 minutes apart returns the same string. That stability is what makes
+    /// it safe to prepend to a user message without invalidating any prefix
+    /// cache: subsequent re-sends of the same conversation produce
+    /// byte-identical bytes for every prior user turn. The timezone is named
+    /// (IANA identifier + abbreviation) so the model can correctly qualify
+    /// times it reports — e.g. from the calendar/reminders tools — to the
+    /// user's local zone. Both fields change at most at day granularity (the
+    /// identifier is constant; the DST abbreviation only flips on transition
+    /// days), so the day-stability guarantee holds. Deliberately omits the
+    /// wall-clock time, which would churn every send and defeat the cache.
     public func renderDayHeader() -> String {
         let f = DateFormatter()
         f.locale = locale
         f.timeZone = timeZone
         f.dateStyle = .full
         f.timeStyle = .none
+        let tzAbbrev = timeZone.abbreviation(for: date) ?? timeZone.identifier
+        let tzName = timeZone.identifier
         switch language {
         case .english:
-            return "[Today is \(f.string(from: date))]"
+            return "[Today is \(f.string(from: date)); timezone \(tzName) (\(tzAbbrev))]"
         case .swedish:
-            return "[Idag är \(f.string(from: date))]"
+            return "[Idag är \(f.string(from: date)); tidszon \(tzName) (\(tzAbbrev))]"
         }
     }
 
