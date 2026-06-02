@@ -54,6 +54,20 @@ public struct MakeChartTool: Tool {
             ett diagram eller när en visuell jämförelse är mycket \
             tydligare än en tabell.
             """
+        case .danish:
+            description = """
+            Tegn et lille diagram direkte i chatten. Understøttede typer: \
+            "bar", "line", "pie". Send et `series`-array med \
+            `{name, points}`; hvert punkt er `{x, y, label?}`. `x` kan \
+            være en streng (kategorisk akse) eller et tal (kontinuerlig \
+            akse) — bland ikke i samme diagram. `y` er altid et tal. \
+            Valgfrie topfelter: `title`, `xLabel`, `yLabel` (de sidste \
+            ignoreres for cirkeldiagrammer). Til cirkeldiagrammer bruges \
+            én serie, hvor hvert punkts `x` bliver lagkagestykkets etiket \
+            og `y` dets størrelse. Brug værktøjet, når brugeren beder om \
+            en graf, et diagram, eller når en visuel sammenligning er \
+            meget tydeligere end en tabel.
+            """
         }
         let schema = JSONSchema(raw: #"""
         {"type":"object","properties":{"type":{"type":"string","enum":["bar","line","pie"]},"title":{"type":"string"},"xLabel":{"type":"string"},"yLabel":{"type":"string"},"series":{"type":"array","minItems":1,"items":{"type":"object","properties":{"name":{"type":"string"},"points":{"type":"array","minItems":1,"items":{"type":"object","properties":{"x":{},"y":{"type":"number"},"label":{"type":"string"}},"required":["x","y"]}}},"required":["points"]}}},"required":["type","series"],"additionalProperties":false}

@@ -52,6 +52,8 @@ public struct TemporalContext: Sendable {
             return "[Today is \(f.string(from: date)); timezone \(tzName) (\(tzAbbrev))]"
         case .swedish:
             return "[Idag är \(f.string(from: date)); tidszon \(tzName) (\(tzAbbrev))]"
+        case .danish:
+            return "[I dag er \(f.string(from: date)); tidszone \(tzName) (\(tzAbbrev))]"
         }
     }
 
@@ -103,6 +105,13 @@ public struct TemporalContext: Sendable {
             Maskinläsbart: \(iso). Använd dessa när frågan beror på "idag", \
             "nu" eller hur färsk en händelse är; förlita dig inte på din \
             träningsdata för datumkänsliga svar.
+            """
+        case .danish:
+            return """
+            Den aktuelle dato og tid er \(human) (\(tzAbbrev), \(tzName)). \
+            Maskinlæsbart: \(iso). Brug disse, når spørgsmålet afhænger af \
+            "i dag", "nu" eller hvor nyt noget er; stol ikke på din \
+            træningsdata til datofølsomme svar.
             """
         }
     }

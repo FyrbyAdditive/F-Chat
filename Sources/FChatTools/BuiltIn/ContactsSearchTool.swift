@@ -28,6 +28,8 @@ public struct ContactsSearchTool: Tool {
             description = "Read-only lookup of the user's macOS Contacts. Provide a `query` to search by name, email, or phone; omit it to list contacts. Returns name, organization, emails, and phone numbers. This tool ONLY reads contacts — it never adds, edits, or deletes them. Requires the user to have granted Contacts permission."
         case .swedish:
             description = "Skrivskyddad uppslagning i användarens macOS-kontakter. Ange `query` för att söka på namn, e-post eller telefon; utelämna den för att lista kontakter. Returnerar namn, organisation, e-postadresser och telefonnummer. Verktyget ENDAST läser kontakter — det lägger aldrig till, ändrar eller tar bort dem. Kräver att användaren har gett behörighet till Kontakter."
+        case .danish:
+            description = "Skrivebeskyttet opslag i brugerens macOS-kontakter. Angiv `query` for at søge på navn, e-mail eller telefon; udelad den for at vise kontakter. Returnerer navn, organisation, e-mailadresser og telefonnumre. Værktøjet læser KUN kontakter — det tilføjer, ændrer eller sletter dem aldrig. Kræver, at brugeren har givet adgang til Kontakter."
         }
         let schema = JSONSchema(raw: #"""
         {"type":"object","properties":{"query":{"type":"string","description":"Optional. Match against name, email, or phone. Omit to list contacts."},"limit":{"type":"integer","minimum":1,"maximum":100,"description":"Max contacts to return (default 25)."}},"additionalProperties":false}

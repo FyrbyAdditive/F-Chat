@@ -117,6 +117,20 @@ struct TemporalContextTests {
         #expect(header.contains("Europe/Stockholm"))
     }
 
+    @Test func dayHeaderDanishUsesDanishWordingAndZone() {
+        let ctx = TemporalContext(
+            date: Self.referenceDate,
+            locale: Locale(identifier: "da_DK"),
+            timeZone: TimeZone(identifier: "Europe/Copenhagen")!,
+            language: .danish
+        )
+        let header = ctx.renderDayHeader()
+        #expect(header.hasPrefix("[I dag er "))
+        #expect(header.hasSuffix("]"))
+        #expect(header.contains("tidszone"))          // Danish spelling
+        #expect(header.contains("Europe/Copenhagen")) // zone still named
+    }
+
     @Test func dayHeaderStableAcrossSubdayDriftSameDay() {
         // 2026-05-29T08:00:00Z → +6h is 14:00 same day. Asserts the
         // cache-friendliness property we depend on.

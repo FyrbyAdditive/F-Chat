@@ -88,6 +88,18 @@ public struct RunCodeTool: Tool {
             bara skriva till sitt eget arbetsutrymme. Returnerar stdout, stderr \
             och slutkoden.
             """
+        case .danish:
+            description = """
+            Kør kode i et sandkassemiljø, der er afgrænset til en af dine \
+            aktiverede færdigheder ("skills"), for at læse dens filer og køre \
+            de medfølgende scripts. Sæt `skill` til færdighedens navn (en af: \
+            \(skillList)); arbejdsmappen er færdighedens mappe, så du kan \
+            `cat SKILL.md`, vise filer og køre medfølgende hjælpescripts (f.eks. \
+            `python scripts/foo.py`). Sæt `language` til "bash" eller \
+            "python"\(pythonNote). Sandkassen har ingen netværksadgang og kan \
+            kun skrive til sit eget arbejdsområde. Returnerer stdout, stderr \
+            og slutkoden.
+            """
         }
         let schema = JSONSchema(raw: #"""
         {"type":"object","properties":{"skill":{"type":"string","description":"Name of the enabled skill to run within."},"language":{"type":"string","enum":["bash","python"]},"code":{"type":"string","description":"The code to execute."}},"required":["skill","language","code"],"additionalProperties":false}

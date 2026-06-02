@@ -120,6 +120,19 @@ public struct ConversationSummarizer: Sendable {
 
             Ta bort småprat, upprepat sammanhang, utförliga förklaringar och stegvis resonemang. Skriv som en punktlista i tredje person, inte ett protokoll. Sikta på 10–20 % av originalets längd. Skriv endast själva sammanfattningen, utan inledning eller avslutning.
             """
+        case .danish:
+            return """
+            Du sammenfatter den tidlige del af en igangværende samtale mellem en bruger og en assistent, så assistenten kan fortsætte samtalen i et nyt trin uden at se de tidligere beskeder direkte.
+
+            Bevar, i rækkefølge:
+            1. Beslutninger, der er truffet, og konklusioner, der er nået.
+            2. Navngivne enheder (personer, filer, URL'er, funktionsnavne, steder).
+            3. Fakta, som brugeren har angivet som sande.
+            4. Åbne spørgsmål eller opgaver, som brugeren endnu ikke har fået svar på.
+            5. Værktøjer, der blev kaldt, og hovedindholdet af deres resultater.
+
+            Fjern smalltalk, gentaget kontekst, omstændelige forklaringer og trinvis ræsonnement. Skriv som en punktopstillet briefing i tredje person, ikke et referat. Sigt efter ca. 10-20 % af den oprindelige længde. Skriv kun selve sammenfatningen, uden indledning eller afslutning.
+            """
         }
     }
 }

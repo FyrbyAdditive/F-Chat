@@ -23,6 +23,8 @@ public struct WebSearchTool: Tool {
             description = "Search the public web for current information. Returns title/url/snippet for the top matches. Use when the answer may have changed since the model's training cutoff or when a citation is wanted."
         case .swedish:
             description = "Sök på det publika webben efter aktuell information. Returnerar titel/url/utdrag för de bästa träffarna. Använd när svaret kan ha ändrats sedan modellens träningsstopp eller när en källa önskas."
+        case .danish:
+            description = "Søg på det offentlige web efter aktuel information. Returnerer titel/url/uddrag for de bedste resultater. Brug det, når svaret kan have ændret sig siden modellens træningsgrænse, eller når der ønskes en kilde."
         }
         let schema = JSONSchema(raw: #"""
         {"type":"object","properties":{"query":{"type":"string","description":"Search query"},"max_results":{"type":"integer","minimum":1,"maximum":20,"default":5}},"required":["query"],"additionalProperties":false}

@@ -55,6 +55,8 @@ public struct RAGSearchTool: Tool {
             description = "Search the user's attached document collections for passages relevant to a query. Returns chunks with document name, page/section, and a relevance score. Use whenever the answer might be in the user's own corpus."
         case .swedish:
             description = "Sök i användarens bifogade dokumentsamlingar efter avsnitt relevanta för en fråga. Returnerar utdrag med dokumentnamn, sida/avsnitt och en relevanspoäng. Använd när svaret kan finnas i användarens eget material."
+        case .danish:
+            description = "Søg i brugerens vedhæftede dokumentsamlinger efter passager, der er relevante for en forespørgsel. Returnerer uddrag med dokumentnavn, side/afsnit og en relevansscore. Brug det, når svaret kan findes i brugerens eget materiale."
         }
         let schema = JSONSchema(raw: #"""
         {"type":"object","properties":{"query":{"type":"string"},"collection":{"type":"string","description":"Optional collection name. Omit to search every collection attached to this chat."},"top_k":{"type":"integer","minimum":1,"maximum":20,"default":6}},"required":["query"],"additionalProperties":false}

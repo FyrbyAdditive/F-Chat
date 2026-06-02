@@ -6,6 +6,7 @@ import Foundation
 public enum PromptLanguage: String, Sendable, Hashable, CaseIterable, Codable {
     case english = "en"
     case swedish = "sv"
+    case danish  = "da"
 
     public static func resolve(from locale: Locale = .current) -> PromptLanguage {
         let code = locale.language.languageCode?.identifier ?? "en"
@@ -93,6 +94,14 @@ public struct LocalizedSystemPrompt: Sendable, Hashable {
                 information från webbsökningar, hämtade sidor eller indexerade \
                 dokument.
                 """
+            case .danish:
+                return """
+                Du er F-Chat, en hjælpsom macOS-assistent skabt af Fyrby Additive. \
+                Vær kortfattet, præcis og direkte. Svar på dansk, medmindre \
+                brugeren skriver på et andet sprog. Angiv kilder, når du bruger \
+                information fra websøgninger, hentede sider eller indekserede \
+                dokumenter.
+                """
             }
         }
 
@@ -109,6 +118,12 @@ public struct LocalizedSystemPrompt: Sendable, Hashable {
                 Du får använda de tillgängliga verktygen när de hjälper dig att svara. \
                 Föredra färre välformulerade anrop framför många små. Anropa inte ett \
                 verktyg om du redan vet svaret.
+                """
+            case .danish:
+                return """
+                Du må bruge de tilgængelige værktøjer, når de hjælper dig med at svare. \
+                Foretræk færre velformede kald frem for mange små. Kald ikke et \
+                værktøj, hvis du allerede kender svaret.
                 """
             }
         }
@@ -158,6 +173,20 @@ public struct LocalizedSystemPrompt: Sendable, Hashable {
                 instruktionerna. Anropa endast en färdighet när dess beskrivning \
                 är tydligt relevant.
                 """
+            case .danish:
+                return """
+                Følgende færdigheder ("skills") er tilgængelige for dig. En \
+                færdighed er en mappe med instruktioner og scripts, som du kan \
+                bruge, når dens beskrivelse matcher opgaven:
+
+                \(bullets)
+
+                Brug en færdighed ved at kalde værktøjet `run_code` med \
+                færdighedens navn. Begynd med at læse dens instruktioner \
+                (`cat SKILL.md`), og kør derefter de medfølgende scripts som \
+                instruktionerne foreskriver. Kald kun en færdighed, når dens \
+                beskrivelse er tydeligt relevant.
+                """
             }
         }
 
@@ -176,6 +205,13 @@ public struct LocalizedSystemPrompt: Sendable, Hashable {
                 verktyget `rag_search` för att slå upp information innan du svarar på \
                 frågor som kan täckas av det bifogade materialet, och ange dokument och \
                 avsnitt i ditt svar.
+                """
+            case .danish:
+                return """
+                En eller flere dokumentsamlinger er knyttet til denne chat. Brug \
+                værktøjet `rag_search` til at slå information op, før du svarer på \
+                spørgsmål, der kan være dækket af det vedhæftede materiale, og angiv \
+                dokument og afsnit i dit svar.
                 """
             }
         }

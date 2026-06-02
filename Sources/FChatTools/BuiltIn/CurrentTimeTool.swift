@@ -23,6 +23,8 @@ public struct CurrentTimeTool: Tool {
             description = "Returns the current date and time at second precision in the user's local time zone (or a named IANA zone if provided). Call this when the answer depends on precise time of day: scheduling, time-since calculations, greetings like \"good morning\". Don't call it just to confirm the date — the date is already supplied in each user message."
         case .swedish:
             description = "Returnerar aktuellt datum och tid med sekundprecision i användarens lokala tidszon (eller en namngiven IANA-zon om sådan anges). Anropa när svaret beror på exakt klockslag: schemaläggning, tidssedan-beräkningar, hälsningar som \"god morgon\". Anropa inte bara för att bekräfta datumet — datumet finns redan med i varje användarmeddelande."
+        case .danish:
+            description = "Returnerer den aktuelle dato og tid med sekundpræcision i brugerens lokale tidszone (eller en navngiven IANA-zone, hvis angivet). Kald det, når svaret afhænger af det præcise klokkeslæt: planlægning, tid-siden-beregninger, hilsner som \"godmorgen\". Kald det ikke kun for at bekræfte datoen — datoen står allerede i hver brugerbesked."
         }
         let schema = JSONSchema(raw: #"""
         {"type":"object","properties":{"timezone":{"type":"string","description":"Optional IANA timezone identifier, e.g. 'Europe/Stockholm' or 'America/New_York'. Defaults to the user's local timezone."}},"additionalProperties":false}
