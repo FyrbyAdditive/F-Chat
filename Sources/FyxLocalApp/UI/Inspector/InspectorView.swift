@@ -21,6 +21,27 @@ struct InspectorView: View {
                     .textFieldStyle(.roundedBorder)
                     .multilineTextAlignment(.trailing)
                 }
+                // Agent picker folded into the Conversation section (was its own
+                // section) to save the extra header + spacing.
+                LabeledContent("Agent") {
+                    Picker("Agent", selection: Binding(
+                        get: {
+                            // nil → global default → Default agent.
+                            viewModel.conversation.settings.agentID
+                                ?? environment.defaultAgentForNewChats
+                                ?? .defaultAgent
+                        },
+                        set: { newID in
+                            viewModel.conversation.settings.agentID = newID
+                        }
+                    )) {
+                        ForEach(environment.agents) { agent in
+                            Text(agent.name).tag(agent.id)
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                }
                 LabeledContent("Created") {
                     Text(viewModel.conversation.createdAt, format: .dateTime)
                         .foregroundStyle(.secondary)
@@ -34,8 +55,6 @@ struct InspectorView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-
-            AgentPickerSection(viewModel: viewModel, environment: environment)
 
             CollectionsAttachSection(viewModel: viewModel, environment: environment)
 
