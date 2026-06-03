@@ -7918,6 +7918,64 @@
           }
         }
       }
+    },
+    "migration.v6.localnetwork.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Local network access needs re-approving"
+          }
+        },
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Local network access needs re-approving"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lokal nätverksåtkomst behöver godkännas igen"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adgang til lokalt netværk skal godkendes igen"
+          }
+        }
+      }
+    },
+    "migration.v6.localnetwork.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Because this update changed the app's identity, macOS will ask again for permission to find devices on your local network the next time FyxLocal connects to a locally-hosted model or MCP server. Click Allow when prompted."
+          }
+        },
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Because this update changed the app's identity, macOS will ask again for permission to find devices on your local network the next time FyxLocal connects to a locally-hosted model or MCP server. Click Allow when prompted."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eftersom den här uppdateringen ändrade appens identitet kommer macOS att be om tillåtelse igen att hitta enheter i ditt lokala nätverk nästa gång FyxLocal ansluter till en lokalt körd modell eller MCP-server. Klicka på Tillåt när du tillfrågas."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fordi denne opdatering ændrede appens identitet, vil macOS igen bede om tilladelse til at finde enheder på dit lokale netværk, næste gang FyxLocal opretter forbindelse til en lokalt hostet model eller MCP-server. Klik på Tillad, når du bliver spurgt."
+          }
+        }
+      }
     }
   }
 }

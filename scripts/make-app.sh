@@ -164,6 +164,8 @@ cat >"$APP_DIR/Contents/Info.plist" <<'PLIST'
     <string>FyxLocal can read your Reminders to answer questions about your to-dos, and — only when you turn on reminder changes and confirm each one — propose adding, editing, deleting, or completing reminders. This is used only when you enable the Reminders tool.</string>
     <key>NSLocationWhenInUseUsageDescription</key>
     <string>FyxLocal uses your location only when you ask the Maps tool for places “near me”. All other map searches and directions work without it, and your location is never stored.</string>
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>FyxLocal connects to AI model servers on your local network — such as vLLM, Ollama, or LM Studio — when you add one in Settings → Providers, and to local MCP servers you configure. This is only used to reach servers you set up yourself.</string>
     <key>NSHighResolutionCapable</key>
     <true/>
     <key>NSPrincipalClass</key>

@@ -10,6 +10,11 @@ import Foundation
 /// rename so upgrading users re-grant Calendar/Reminders/Contacts/Location.
 @Suite("StateMigrations")
 struct StateMigrationsTests {
+    static let tccNotice = MigrationNotice(titleKey: "migration.v5.tcc.title",
+                                           bodyKey: "migration.v5.tcc.body")
+    static let localNetworkNotice = MigrationNotice(titleKey: "migration.v6.localnetwork.title",
+                                                    bodyKey: "migration.v6.localnetwork.body")
+
     /// Build a state at a given schema version with an explicit tool set.
     private func state(version: Int, tools: Set<String>?) -> PersistedAppState {
         PersistedAppState(
@@ -41,15 +46,14 @@ struct StateMigrationsTests {
         }
         // Version stamped current.
         #expect(result.state.version == StateMigrations.currentVersion)
-        // A notice is produced because TCC tools were actually turned off.
-        #expect(result.notices == [MigrationNotice(titleKey: "migration.v5.tcc.title",
-                                                   bodyKey: "migration.v5.tcc.body")])
+        // From v4: both the v5 TCC notice (tools were on) and the v6
+        // local-network notice, in migration order.
+        #expect(result.notices == [Self.tccNotice, Self.localNetworkNotice])
     }
 
     @Test func idempotentForCurrentVersionAndNoNotices() {
-        // A user who RE-enabled Calendar after upgrading (state already at v5)
-        // must NOT have it stripped again — the migration keys on version — and
-        // must see no notice.
+        // A user already at the current version: no migration runs, no notices —
+        // re-enabled tools are never stripped, the notices never re-show.
         let s = state(version: StateMigrations.currentVersion, tools: ["calendar", "web_search"])
         let result = StateMigrations.migrate(s)
         #expect(result.state.enabledTools == ["calendar", "web_search"])
@@ -57,20 +61,31 @@ struct StateMigrationsTests {
         #expect(result.notices.isEmpty)
     }
 
-    @Test func nilToolsIsNoOpWithNoNotice() {
+    @Test func v5StateGetsOnlyLocalNetworkNotice() {
+        // Coming from v5 (already past the TCC migration): only the v6
+        // local-network notice fires.
+        let result = StateMigrations.migrate(state(version: 5, tools: ["calendar", "web_search"]))
+        #expect(result.state.version == StateMigrations.currentVersion)
+        #expect(result.notices == [Self.localNetworkNotice])
+        // v5 already disabled TCC tools; v6 must not strip anything.
+        #expect(result.state.enabledTools == ["calendar", "web_search"])
+    }
+
+    @Test func nilToolsStillGetsLocalNetworkNotice() {
+        // No TCC tools to disable (nil) → no v5 notice, but the v6 local-network
+        // notice still fires on any pre-6 upgrade.
         let result = StateMigrations.migrate(state(version: 4, tools: nil))
         #expect(result.state.enabledTools == nil)
         #expect(result.state.version == StateMigrations.currentVersion)
-        #expect(result.notices.isEmpty)   // nothing was turned off → no notice
+        #expect(result.notices == [Self.localNetworkNotice])
     }
 
-    @Test func noNoticeWhenNoTCCToolsWereEnabled() {
-        // Migrates (version bumps) but the user had no TCC tools on, so there's
-        // nothing to explain → no notice.
+    @Test func noTCCNoticeWhenNoTCCToolsWereEnabled() {
+        // The user had no TCC tools on → no v5 notice; only the v6 notice.
         let result = StateMigrations.migrate(state(version: 4, tools: ["web_search", "run_code"]))
         #expect(result.state.version == StateMigrations.currentVersion)
         #expect(result.state.enabledTools == ["web_search", "run_code"])
-        #expect(result.notices.isEmpty)
+        #expect(result.notices == [Self.localNetworkNotice])
     }
 
     /// Guards the decodable-defaults pitfall: a hand-written v4 JSON (with the
@@ -93,7 +108,7 @@ struct StateMigrationsTests {
 
         #expect(result.state.enabledTools == ["web_search"])
         #expect(result.state.version == StateMigrations.currentVersion)
-        #expect(result.notices.count == 1)
+        #expect(result.notices == [Self.tccNotice, Self.localNetworkNotice])
     }
 
     /// `AppStateStore.load()` applies migrations, persists the upgraded snapshot
@@ -112,7 +127,7 @@ struct StateMigrationsTests {
         let loaded = try #require(store.load())
         #expect(loaded.state.version == StateMigrations.currentVersion)
         #expect(loaded.state.enabledTools == ["web_search"])
-        #expect(loaded.notices.count == 1)   // TCC notice surfaced
+        #expect(loaded.notices == [Self.tccNotice, Self.localNetworkNotice])   // both surfaced
 
         // The file on disk was rewritten at the current version…
         let onDisk = try JSONDecoder().decode(PersistedAppState.self, from: Data(contentsOf: tmp))

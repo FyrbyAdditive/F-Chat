@@ -39,7 +39,7 @@ public struct MigrationResult: Sendable {
 public enum StateMigrations {
     /// The schema version produced by the current build. Equals the highest
     /// migration step below; `migrate(_:)` stamps state to this value.
-    public static let currentVersion = 5
+    public static let currentVersion = 6
 
     /// Built-in tools that require a macOS TCC permission grant (Calendar,
     /// Reminders, Contacts full-access; Location for Maps' "near me"). Includes
@@ -73,8 +73,20 @@ public enum StateMigrations {
                 ))
             }
         }
+        if s.version < 6 {
+            // Informational only — no state change. The bundle-id change also
+            // resets the macOS "find devices on your local network" permission;
+            // it has no request API, so we just tell the user it'll be asked
+            // again the next time the app reaches a local model / MCP server.
+            // Always shown on upgrade (don't gate on provider URLs — detecting
+            // "local" is unreliable for hostname/`.local`/`.internal` servers).
+            notices.append(MigrationNotice(
+                titleKey: "migration.v6.localnetwork.title",
+                bodyKey: "migration.v6.localnetwork.body"
+            ))
+        }
         // Future migrations go here, in ascending order:
-        // if s.version < 6 { s = v6_…(s); notices.append(…) }
+        // if s.version < 7 { s = v7_…(s); notices.append(…) }
         s.version = currentVersion
         return MigrationResult(state: s, notices: notices)
     }
