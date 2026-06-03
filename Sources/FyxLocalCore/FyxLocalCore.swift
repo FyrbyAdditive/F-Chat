@@ -5,5 +5,5 @@ import Foundation
 
 public enum FyxLocal {
     public static let appIdentifier = "com.fyrbyadditive.fyxlocal"
-    public static let version = "0.5.2"
+    public static let version = "0.6.0"
 }
