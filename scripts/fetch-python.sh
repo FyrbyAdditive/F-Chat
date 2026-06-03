@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Fetch a relocatable, self-contained CPython for bundling into F-Chat.app.
+# Fetch a relocatable, self-contained CPython for bundling into FyxLocal.app.
 #
 # Agent Skills frequently ship `.py` helper scripts, and an end-user Mac is not
 # guaranteed to have a system `python3`. We bundle a standalone CPython (from

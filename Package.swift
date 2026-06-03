@@ -2,17 +2,17 @@
 import PackageDescription
 
 let package = Package(
-    name: "F-Chat",
+    name: "FyxLocal",
     defaultLocalization: "en",
     platforms: [.macOS(.v26)],
     products: [
-        .executable(name: "FChat", targets: ["FChatApp"]),
-        .library(name: "FChatCore", targets: ["FChatCore"]),
-        .library(name: "FChatProviders", targets: ["FChatProviders"]),
-        .library(name: "FChatWeb", targets: ["FChatWeb"]),
-        .library(name: "FChatTools", targets: ["FChatTools"]),
-        .library(name: "FChatMCP", targets: ["FChatMCP"]),
-        .library(name: "FChatRAG", targets: ["FChatRAG"]),
+        .executable(name: "FyxLocal", targets: ["FyxLocalApp"]),
+        .library(name: "FyxLocalCore", targets: ["FyxLocalCore"]),
+        .library(name: "FyxLocalProviders", targets: ["FyxLocalProviders"]),
+        .library(name: "FyxLocalWeb", targets: ["FyxLocalWeb"]),
+        .library(name: "FyxLocalTools", targets: ["FyxLocalTools"]),
+        .library(name: "FyxLocalMCP", targets: ["FyxLocalMCP"]),
+        .library(name: "FyxLocalRAG", targets: ["FyxLocalRAG"]),
     ],
     dependencies: [
         .package(url: "https://github.com/scinfu/SwiftSoup.git", from: "2.7.0"),
@@ -20,7 +20,7 @@ let package = Package(
         .package(url: "https://github.com/groue/GRDB.swift.git", from: "6.29.0"),
         // On-device embeddings (Qwen3-Embedding-4B on Apple Silicon via MLX).
         // Model weights are vendored into the app bundle under
-        // Sources/FChatRAG/Resources/Qwen3-Embedding-4B-4bit-DWQ — no
+        // Sources/FyxLocalRAG/Resources/Qwen3-Embedding-4B-4bit-DWQ — no
         // Hugging Face download at runtime. We still need swift-transformers
         // for the tokenizer loader macros (#huggingFaceTokenizerLoader).
         .package(url: "https://github.com/ml-explore/mlx-swift-lm", from: "3.31.3"),
@@ -51,7 +51,7 @@ let package = Package(
             ]
         ),
         .target(
-            name: "FChatCore",
+            name: "FyxLocalCore",
             dependencies: [
                 // ZIP reader for importing `.zip`-packaged Agent Skills.
                 .product(name: "ZIPFoundation", package: "ZIPFoundation"),
@@ -67,38 +67,38 @@ let package = Package(
             ]
         ),
         .target(
-            name: "FChatProviders",
-            dependencies: ["FChatCore"]
+            name: "FyxLocalProviders",
+            dependencies: ["FyxLocalCore"]
         ),
         .target(
-            name: "FChatWeb",
+            name: "FyxLocalWeb",
             dependencies: [
-                "FChatCore",
+                "FyxLocalCore",
                 .product(name: "SwiftSoup", package: "SwiftSoup"),
             ],
             resources: [.copy("Resources/Readability.js")]
         ),
         .target(
-            name: "FChatTools",
-            dependencies: ["FChatCore", "FChatProviders", "FChatWeb"]
+            name: "FyxLocalTools",
+            dependencies: ["FyxLocalCore", "FyxLocalProviders", "FyxLocalWeb"]
         ),
         .target(
-            name: "FChatMCP",
-            dependencies: ["FChatCore", "FChatProviders", "FChatTools"]
+            name: "FyxLocalMCP",
+            dependencies: ["FyxLocalCore", "FyxLocalProviders", "FyxLocalTools"]
         ),
         .target(
-            name: "FChatRAG",
+            name: "FyxLocalRAG",
             dependencies: [
-                "FChatCore",
-                "FChatProviders",
-                "FChatTools",
-                "FChatWeb",
+                "FyxLocalCore",
+                "FyxLocalProviders",
+                "FyxLocalTools",
+                "FyxLocalWeb",
                 "CSQLiteVec",
                 .product(name: "GRDB", package: "GRDB.swift"),
                 .product(name: "MLXEmbedders", package: "mlx-swift-lm"),
                 .product(name: "MLXHuggingFace", package: "mlx-swift-lm"),
                 // Tokenizer macros expand to Tokenizers.AutoTokenizer.from(...)
-                // at the call site, so this module must be on the FChatRAG
+                // at the call site, so this module must be on the FyxLocalRAG
                 // dep list even though we never name it directly in code.
                 .product(name: "Tokenizers", package: "swift-transformers"),
                 // ZIP reader for DOCX/PPTX (Office Open XML are ZIP archives).
@@ -114,55 +114,55 @@ let package = Package(
             ]
         ),
         .executableTarget(
-            name: "FChatApp",
+            name: "FyxLocalApp",
             dependencies: [
-                "FChatCore",
-                "FChatProviders",
-                "FChatWeb",
-                "FChatTools",
-                "FChatMCP",
-                "FChatRAG",
+                "FyxLocalCore",
+                "FyxLocalProviders",
+                "FyxLocalWeb",
+                "FyxLocalTools",
+                "FyxLocalMCP",
+                "FyxLocalRAG",
                 .product(name: "Markdown", package: "swift-markdown"),
             ],
             resources: [.process("Resources")]
         ),
         .testTarget(
-            name: "FChatCoreTests",
+            name: "FyxLocalCoreTests",
             dependencies: [
-                "FChatCore",
+                "FyxLocalCore",
                 .product(name: "ZIPFoundation", package: "ZIPFoundation"),
             ]
         ),
         .testTarget(
-            name: "FChatProvidersTests",
-            dependencies: ["FChatProviders"],
+            name: "FyxLocalProvidersTests",
+            dependencies: ["FyxLocalProviders"],
             resources: [.process("Fixtures")]
         ),
         .testTarget(
-            name: "FChatWebTests",
-            dependencies: ["FChatWeb"],
+            name: "FyxLocalWebTests",
+            dependencies: ["FyxLocalWeb"],
             resources: [.process("Fixtures")]
         ),
         .testTarget(
-            name: "FChatToolsTests",
-            dependencies: ["FChatTools"]
+            name: "FyxLocalToolsTests",
+            dependencies: ["FyxLocalTools"]
         ),
         .testTarget(
-            name: "FChatMCPTests",
-            dependencies: ["FChatMCP"]
+            name: "FyxLocalMCPTests",
+            dependencies: ["FyxLocalMCP"]
         ),
         .testTarget(
-            name: "FChatRAGTests",
+            name: "FyxLocalRAGTests",
             dependencies: [
-                "FChatRAG",
+                "FyxLocalRAG",
                 .product(name: "GRDB", package: "GRDB.swift"),
                 .product(name: "ZIPFoundation", package: "ZIPFoundation"),
             ],
             resources: [.process("Fixtures")]
         ),
         .testTarget(
-            name: "FChatAppTests",
-            dependencies: ["FChatApp"]
+            name: "FyxLocalAppTests",
+            dependencies: ["FyxLocalApp"]
         ),
     ]
 )

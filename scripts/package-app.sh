@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Package the already-built F-Chat.app into distributable .zip and .dmg.
+# Package the already-built FyxLocal.app into distributable .zip and .dmg.
 #
 # Run AFTER scripts/make-app.sh (ideally FCHAT_NOTARIZE=1 so the app is
 # notarized + stapled). This stage is deliberately separate so packaging can be
@@ -7,20 +7,20 @@
 # and stapled notarization ticket (ditto and hdiutil keep xattrs/resource forks).
 #
 # Output (under build/, which is gitignored):
-#   build/F-Chat-<version>.zip
-#   build/F-Chat-<version>.dmg
+#   build/FyxLocal-<version>.zip
+#   build/FyxLocal-<version>.dmg
 #
 # Options:
 #   --sign-dmg   codesign the .dmg with the Developer ID identity
 #   --notarize   submit the .dmg to the notary service + staple it
-#                (implies --sign-dmg; needs the FChat keychain profile,
+#                (implies --sign-dmg; needs the FyxLocal keychain profile,
 #                 or set FCHAT_NOTARY_PROFILE)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-APP_DIR="$ROOT/build/F-Chat.app"
+APP_DIR="$ROOT/build/FyxLocal.app"
 SIGN_DMG=false
 NOTARIZE=false
 for arg in "$@"; do
@@ -47,10 +47,10 @@ else
 fi
 
 # Version drives the artifact filenames.
-VERSION="$(grep -oE '"[0-9]+\.[0-9]+\.[0-9]+"' "$ROOT/Sources/FChatCore/FChatCore.swift" | head -1 | tr -d '"')"
+VERSION="$(grep -oE '"[0-9]+\.[0-9]+\.[0-9]+"' "$ROOT/Sources/FyxLocalCore/FyxLocalCore.swift" | head -1 | tr -d '"')"
 VERSION="${VERSION:-0.0.0}"
-ZIP_OUT="$ROOT/build/F-Chat-$VERSION.zip"
-DMG_OUT="$ROOT/build/F-Chat-$VERSION.dmg"
+ZIP_OUT="$ROOT/build/FyxLocal-$VERSION.zip"
+DMG_OUT="$ROOT/build/FyxLocal-$VERSION.dmg"
 SIGN_ID="${FCHAT_CODESIGN_IDENTITY:-Developer ID Application: Timothy Ellis (QS865LKS7W)}"
 
 # --- ZIP --------------------------------------------------------------------
@@ -66,11 +66,11 @@ rm -f "$ZIP_OUT"
 echo "==> dmg  -> $(basename "$DMG_OUT")"
 STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
-/usr/bin/ditto "$APP_DIR" "$STAGE/F-Chat.app"
+/usr/bin/ditto "$APP_DIR" "$STAGE/FyxLocal.app"
 ln -s /Applications "$STAGE/Applications"
 rm -f "$DMG_OUT"
 hdiutil create \
-    -volname "F-Chat $VERSION" \
+    -volname "FyxLocal $VERSION" \
     -srcfolder "$STAGE" \
     -fs HFS+ \
     -format UDZO \
@@ -88,7 +88,7 @@ if $SIGN_DMG; then
 fi
 
 if $NOTARIZE; then
-    PROFILE="${FCHAT_NOTARY_PROFILE:-FChat}"
+    PROFILE="${FCHAT_NOTARY_PROFILE:-FyxLocal}"
     echo "==> notarize dmg (profile: $PROFILE)"
     if xcrun notarytool submit "$DMG_OUT" --keychain-profile "$PROFILE" --wait; then
         xcrun stapler staple "$DMG_OUT" \

@@ -1,6 +1,6 @@
 # Third-Party Notices
 
-F-Chat is licensed under the GNU General Public License v3.0 (see [LICENSE](LICENSE)).
+FyxLocal is licensed under the GNU General Public License v3.0 (see [LICENSE](LICENSE)).
 It incorporates and/or bundles the third-party components listed below. Each is used
 under its own license; those licenses are preserved here as required. All listed
 licenses are compatible with redistribution as part of a GPLv3 work.
@@ -58,7 +58,7 @@ CommonMark spec; that NOTICE is preserved in the package and reproduced upstream
 
 The model weights are vendored into this repository via Git-LFS
 (`vendor/qwen3-safetensors/`) and reassembled at build time. The tokenizer and config
-files ship under `Sources/FChatRAG/Resources/Qwen3-Embedding-4B-4bit-DWQ/`.
+files ship under `Sources/FyxLocalRAG/Resources/Qwen3-Embedding-4B-4bit-DWQ/`.
 
 ---
 
@@ -91,8 +91,8 @@ upstream license texts are preserved in [`Sources/CSQLiteVec/LICENSE`](Sources/C
 
 ## Tokenizer data
 
-Bundled under `Sources/FChatCore/Tokenization/Resources/` for offline token counting;
-see [`Sources/FChatCore/Tokenization/Resources/SOURCES.md`](Sources/FChatCore/Tokenization/Resources/SOURCES.md).
+Bundled under `Sources/FyxLocalCore/Tokenization/Resources/` for offline token counting;
+see [`Sources/FyxLocalCore/Tokenization/Resources/SOURCES.md`](Sources/FyxLocalCore/Tokenization/Resources/SOURCES.md).
 
 - `cl100k_base.tiktoken`, `o200k_base.tiktoken` — OpenAI tiktoken BPE rank tables
   (<https://github.com/openai/tiktoken>), MIT.
@@ -103,7 +103,7 @@ see [`Sources/FChatCore/Tokenization/Resources/SOURCES.md`](Sources/FChatCore/To
 
 ## Web asset: Mozilla Readability (not currently bundled)
 
-`Sources/FChatWeb/Resources/Readability.js` is a **placeholder stub** — the real
+`Sources/FyxLocalWeb/Resources/Readability.js` is a **placeholder stub** — the real
 Mozilla Readability library (<https://github.com/mozilla/readability>, Apache-2.0) is
-**not shipped** with F-Chat. If it is bundled in the future, its Apache-2.0 notice must
+**not shipped** with FyxLocal. If it is bundled in the future, its Apache-2.0 notice must
 be added here.

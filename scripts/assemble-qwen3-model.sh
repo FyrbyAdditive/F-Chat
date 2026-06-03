@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Reassembles the split Qwen3 model.safetensors from its LFS-stored parts
-# at vendor/qwen3-safetensors/ into the FChatRAG resource directory at
-# Sources/FChatRAG/Resources/Qwen3-Embedding-4B-4bit-DWQ/model.safetensors.
+# at vendor/qwen3-safetensors/ into the FyxLocalRAG resource directory at
+# Sources/FyxLocalRAG/Resources/Qwen3-Embedding-4B-4bit-DWQ/model.safetensors.
 #
 # Necessary because the model weights (~2.26 GB) exceed GitHub's 2 GiB
 # per-file LFS cap and have to be split. The single assembled blob is
@@ -17,7 +17,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PARTS_DIR="$ROOT/vendor/qwen3-safetensors"
-OUT_DIR="$ROOT/Sources/FChatRAG/Resources/Qwen3-Embedding-4B-4bit-DWQ"
+OUT_DIR="$ROOT/Sources/FyxLocalRAG/Resources/Qwen3-Embedding-4B-4bit-DWQ"
 OUT="$OUT_DIR/model.safetensors"
 EXPECTED_SIZE=2262632177  # bytes; matches Qwen3-Embedding-4B-4bit-DWQ
 

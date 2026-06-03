@@ -4,21 +4,41 @@
             "type": "swift",
             "request": "launch",
             "args": [],
-            "cwd": "${workspaceFolder:F-Chat}",
-            "name": "Debug FChat",
-            "target": "FChat",
+            "cwd": "${workspaceFolder:FyxLocal}",
+            "name": "Debug FyxLocal",
+            "target": "FyxLocal",
             "configuration": "debug",
-            "preLaunchTask": "swift: Build Debug FChat"
+            "preLaunchTask": "swift: Build Debug FyxLocal"
         },
         {
             "type": "swift",
             "request": "launch",
             "args": [],
-            "cwd": "${workspaceFolder:F-Chat}",
-            "name": "Release FChat",
-            "target": "FChat",
+            "cwd": "${workspaceFolder:FyxLocal}",
+            "name": "Release FyxLocal",
+            "target": "FyxLocal",
             "configuration": "release",
-            "preLaunchTask": "swift: Build Release FChat"
+            "preLaunchTask": "swift: Build Release FyxLocal"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:FyxLocal}",
+            "name": "Debug FyxLocal",
+            "target": "FyxLocal",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug FyxLocal"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:FyxLocal}",
+            "name": "Release FyxLocal",
+            "target": "FyxLocal",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release FyxLocal"
         }
     ]
 }

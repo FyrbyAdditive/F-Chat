@@ -1,4 +1,4 @@
-# Notarizing F-Chat for distribution
+# Notarizing FyxLocal for distribution
 
 The build already code-signs with Developer ID + hardened runtime
 (`scripts/make-app.sh`). Notarization is the remaining step so other people's
@@ -9,7 +9,7 @@ with your App Store Connect account.
 ## One-time setup (required — only you can do this)
 
 Pick ONE of the two auth methods and store it under the keychain profile name
-`FChat` (the default the build looks for).
+`FyxLocal` (the default the build looks for).
 
 ### Option A — App Store Connect API key (recommended)
 1. In App Store Connect → Users and Access → Integrations → App Store Connect API,
@@ -17,7 +17,7 @@ Pick ONE of the two auth methods and store it under the keychain profile name
    (you also get a **Key ID** and an **Issuer ID**).
 2. Store it:
    ```sh
-   xcrun notarytool store-credentials FChat \
+   xcrun notarytool store-credentials FyxLocal \
        --key /path/to/AuthKey_XXXX.p8 \
        --key-id <KEY_ID> \
        --issuer <ISSUER_UUID>
@@ -28,7 +28,7 @@ Pick ONE of the two auth methods and store it under the keychain profile name
    Security → App-Specific Passwords.
 2. Store it:
    ```sh
-   xcrun notarytool store-credentials FChat \
+   xcrun notarytool store-credentials FyxLocal \
        --apple-id you@example.com \
        --team-id QS865LKS7W \
        --password <app-specific-password>
@@ -41,7 +41,7 @@ FCHAT_NOTARIZE=1 ./scripts/make-app.sh
 ```
 
 This signs the bundle, zips it, submits to the notary service (`--wait`), staples
-the ticket onto `build/F-Chat.app`, and verifies with `spctl`. A normal
+the ticket onto `build/FyxLocal.app`, and verifies with `spctl`. A normal
 `./scripts/make-app.sh` skips all of this.
 
 Override the profile name with `FCHAT_NOTARY_PROFILE=<name>` if you stored it
@@ -50,10 +50,10 @@ under a different name.
 ## Verifying / troubleshooting
 
 ```sh
-spctl -a -vvv -t exec build/F-Chat.app          # should say: accepted, source=Notarized Developer ID
-xcrun stapler validate build/F-Chat.app          # ticket present?
-xcrun notarytool history --keychain-profile FChat
-xcrun notarytool log <submission-id> --keychain-profile FChat   # why a submission failed
+spctl -a -vvv -t exec build/FyxLocal.app          # should say: accepted, source=Notarized Developer ID
+xcrun stapler validate build/FyxLocal.app          # ticket present?
+xcrun notarytool history --keychain-profile FyxLocal
+xcrun notarytool log <submission-id> --keychain-profile FyxLocal   # why a submission failed
 ```
 
 Common rejection cause: a nested binary not signed with hardened runtime — the
