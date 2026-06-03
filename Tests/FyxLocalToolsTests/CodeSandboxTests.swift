@@ -94,12 +94,19 @@ struct CodeSandboxTests {
         defer { try? FileManager.default.removeItem(at: dir) }
         let sb = CodeSandbox()
         try #require(sb.isAvailable(.bash))
-        // Use bash's /dev/tcp which doesn't depend on curl being present.
+        // Use bash's /dev/tcp (no curl dependency) to attempt an outbound
+        // socket. Target loopback on a closed port (9 = discard, nothing
+        // listening) rather than a real internet host: if the sandbox blocks
+        // the socket the connect never happens (BLOCKED); if it doesn't, the
+        // closed port refuses INSTANTLY (also BLOCKED) instead of hanging on a
+        // routed/slow connection — which previously stalled the whole suite.
+        // Either way this returns in milliseconds. The assertion (no CONNECTED)
+        // still proves the sandboxed process could not open a working socket.
         let r = try await sb.run(
             language: .bash,
-            code: "(exec 3<>/dev/tcp/example.com/80) 2>&1 && echo CONNECTED || echo BLOCKED",
+            code: "(exec 3<>/dev/tcp/127.0.0.1/9) 2>&1 && echo CONNECTED || echo BLOCKED",
             workingDirectory: dir,
-            timeout: .seconds(10)
+            timeout: .seconds(3)
         )
         #expect(r.stdout.contains("BLOCKED"))
         #expect(!r.stdout.contains("CONNECTED"))
