@@ -34,6 +34,16 @@ struct PromptStringsTests {
         #expect(sv != da)
     }
 
+    /// The US/UK English split is real, not a silent copy: the one prompt
+    /// string that diverges carries British spelling in en-GB and American in en.
+    @Test func britishEnglishUsesBritishSpelling() {
+        let us = PromptStrings.string("tool.contacts.desc", .english)
+        let gb = PromptStrings.string("tool.contacts.desc", .englishGB)
+        #expect(us.contains("organization"))
+        #expect(gb.contains("organisation"))
+        #expect(us != gb)
+    }
+
     /// The `%@` format overload substitutes positional args in order.
     @Test func formatArgsSubstitute() {
         let header = PromptStrings.string("temporal.dayheader", .english,

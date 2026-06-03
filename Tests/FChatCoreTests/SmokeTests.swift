@@ -33,9 +33,14 @@ struct CoreSmokeTests {
     }
 
     @Test(arguments: [
-        ("en", PromptLanguage.english),
+        ("en", PromptLanguage.english),       // bare en (no region) → base/US
+        ("en_US", PromptLanguage.english),    // US → base
+        ("en_AU", PromptLanguage.english),    // other English regions → base
+        ("en_GB", PromptLanguage.englishGB),  // British → en-GB
         ("sv", PromptLanguage.swedish),
-        ("de", PromptLanguage.english),
+        ("sv_SE", PromptLanguage.swedish),    // region ignored for non-English
+        ("da_DK", PromptLanguage.danish),
+        ("de", PromptLanguage.english),       // unsupported → base fallback
     ])
     func resolvesPromptLanguageFromLocale(code: String, expected: PromptLanguage) {
         let locale = Locale(identifier: code)

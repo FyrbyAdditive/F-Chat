@@ -4,12 +4,20 @@
 import Foundation
 
 public enum PromptLanguage: String, Sendable, Hashable, CaseIterable, Codable {
-    case english = "en"
-    case swedish = "sv"
-    case danish  = "da"
+    case english   = "en"      // US / base. rawValue kept stable for back-compat:
+                               // existing state.json stores "en"; renaming it would
+                               // fail PersistedAppState decode and reset user state.
+    case englishGB = "en-GB"   // UK English (British spelling)
+    case swedish   = "sv"
+    case danish    = "da"
 
     public static func resolve(from locale: Locale = .current) -> PromptLanguage {
         let code = locale.language.languageCode?.identifier ?? "en"
+        // English splits by region: British locale → en-GB, everything else
+        // (en-US, en-AU, bare en, …) → the en/base case.
+        if code == "en" {
+            return locale.region?.identifier == "GB" ? .englishGB : .english
+        }
         return PromptLanguage(rawValue: code) ?? .english
     }
 }
@@ -106,7 +114,8 @@ public struct LocalizedSystemPrompt: Sendable, Hashable {
                 .map { "- \(sanitize($0.name, max: 80)): \(sanitize($0.description, max: 300))" }
                 .joined(separator: "\n")
             switch language {
-            case .english:
+            // en-GB shares the English wording (no US/UK-divergent words here).
+            case .english, .englishGB:
                 return """
                 The following skills are available to you. A skill is a folder \
                 of instructions and scripts you can use when its description \

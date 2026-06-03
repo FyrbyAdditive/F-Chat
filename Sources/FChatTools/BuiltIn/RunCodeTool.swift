@@ -65,7 +65,8 @@ public struct RunCodeTool: Tool {
         let skillList = skillNames.isEmpty ? "—" : skillNames.joined(separator: ", ")
         let description: String
         switch language {
-        case .english:
+        // en-GB shares the English wording (no US/UK-divergent words here).
+        case .english, .englishGB:
             description = """
             Run code inside a sandboxed environment scoped to one of your \
             enabled skills, to read its files and run its bundled scripts. \

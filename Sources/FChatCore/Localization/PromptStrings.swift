@@ -44,10 +44,22 @@ public enum PromptStrings {
         "tool.make_chart.desc",
     ]
 
-    /// Parsed catalog: key -> (language code -> value). Loaded once.
-    private static let catalog: [String: [String: String]] = loadCatalog()
+    /// Parsed catalog: key -> (language code -> value). Cached after the first
+    /// SUCCESSFUL load. We never cache an empty map: if a load comes back empty
+    /// (e.g. the bundle isn't ready yet at first access), the next call retries,
+    /// so a transient miss can't get frozen in for the process lifetime.
+    private static let lock = NSLock()
+    private nonisolated(unsafe) static var cached: [String: [String: String]]?
 
-    private static let languageCodes = ["en", "sv", "da"]
+    private static var catalog: [String: [String: String]] {
+        lock.lock(); defer { lock.unlock() }
+        if let c = cached, !c.isEmpty { return c }
+        let loaded = loadCatalog()
+        if !loaded.isEmpty { cached = loaded }
+        return loaded
+    }
+
+    private static let languageCodes = ["en", "en-GB", "sv", "da"]
 
     /// Loads the catalog into `key -> (lang -> value)`. Handles BOTH bundle
     /// layouts, because the two build systems emit different things:

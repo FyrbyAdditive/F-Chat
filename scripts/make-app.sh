@@ -125,6 +125,7 @@ cat >"$APP_DIR/Contents/Info.plist" <<'PLIST'
     <key>CFBundleLocalizations</key>
     <array>
         <string>en</string>
+        <string>en-GB</string>
         <string>sv</string>
         <string>da</string>
     </array>
