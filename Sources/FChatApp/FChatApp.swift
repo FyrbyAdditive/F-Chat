@@ -14,6 +14,16 @@ struct FChatApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     #endif
 
+    init() {
+        // Ignore SIGPIPE process-wide. We spawn child processes (stdio MCP
+        // servers) and write to their stdin; if the child dies, the pipe
+        // breaks and writing raises SIGPIPE, whose default action silently
+        // kills us with NO crash report. With SIG_IGN the failed write
+        // instead returns EPIPE, which FileHandle surfaces as a thrown error
+        // our do/catch can handle.
+        signal(SIGPIPE, SIG_IGN)
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView(environment: environment)

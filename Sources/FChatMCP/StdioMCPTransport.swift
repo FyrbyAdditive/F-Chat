@@ -29,14 +29,31 @@ public actor StdioMCPTransport: MCPTransport {
     }
 
     public func start() throws {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: command)
-        process.arguments = arguments
-        if !environment.isEmpty {
-            var env = ProcessInfo.processInfo.environment
-            for (k, v) in environment { env[k] = v }
-            process.environment = env
+        // Build the child environment with a usable PATH. A GUI app launched
+        // from Finder inherits a bare PATH (often just /usr/bin:/bin:/usr/sbin:
+        // /sbin), so a child like `npx` — a `#!/usr/bin/env node` script —
+        // can't find `node` and dies instantly. Prepend the common tool dirs
+        // so interpreters resolve. User-supplied env still wins.
+        var env = ProcessInfo.processInfo.environment
+        let toolPaths = ["/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/bin"]
+        let existing = (env["PATH"]?.split(separator: ":").map(String.init)) ?? []
+        var seen = Set<String>()
+        env["PATH"] = (toolPaths + existing).filter { seen.insert($0).inserted }.joined(separator: ":")
+        for (k, v) in environment { env[k] = v }
+
+        // Resolve the command: an absolute/relative path is used as-is; a bare
+        // name (e.g. "npx") is looked up against the child PATH. Then verify it
+        // is actually executable BEFORE launching, so a bad path becomes a
+        // clear thrown error instead of a launch that limps and then SIGPIPEs.
+        let resolved = Self.resolveExecutable(command, path: env["PATH"] ?? "")
+        guard let resolved else {
+            throw MCPTransportError.ioError("MCP command not found or not executable: \(command)")
         }
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: resolved)
+        process.arguments = arguments
+        process.environment = env
         if let wd = workingDirectory {
             process.currentDirectoryURL = URL(fileURLWithPath: wd)
         }
@@ -46,11 +63,41 @@ public actor StdioMCPTransport: MCPTransport {
         process.standardInput = stdin
         process.standardOutput = stdout
         process.standardError = stderr
-        try process.run()
+        do {
+            try process.run()
+        } catch {
+            throw MCPTransportError.ioError("failed to launch \(resolved): \(error.localizedDescription)")
+        }
         self.process = process
         self.stdinHandle = stdin.fileHandleForWriting
         self.stdoutHandle = stdout.fileHandleForReading
         self.stderrHandle = stderr.fileHandleForReading
+    }
+
+    /// Resolve a command to an executable path. Absolute/relative paths (those
+    /// containing "/") are checked directly; a bare name is searched across the
+    /// PATH entries. Returns nil if nothing executable is found.
+    private static func resolveExecutable(_ command: String, path: String) -> String? {
+        let fm = FileManager.default
+        if command.contains("/") {
+            return fm.isExecutableFile(atPath: command) ? command : nil
+        }
+        for dir in path.split(separator: ":") {
+            let candidate = dir + "/" + command
+            if fm.isExecutableFile(atPath: String(candidate)) { return String(candidate) }
+        }
+        return nil
+    }
+
+    /// Best-effort read of any bytes the child wrote to stderr (e.g.
+    /// "env: node: No such file or directory"), for surfacing on early exit.
+    /// Non-blocking: returns whatever is buffered now.
+    public func drainStderr() -> String? {
+        guard let stderrHandle else { return nil }
+        let data = stderrHandle.availableData
+        guard !data.isEmpty, let s = String(data: data, encoding: .utf8) else { return nil }
+        let trimmed = s.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
     }
 
     public func send(_ frame: JSONRPCFrame) async throws {

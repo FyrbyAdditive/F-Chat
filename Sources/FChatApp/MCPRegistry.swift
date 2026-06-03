@@ -175,7 +175,14 @@ final class MCPRegistry {
             status[record.id] = .ready(toolCount: tools.count)
         } catch {
             await client.shutdown()
-            status[record.id] = .failed(Self.describe(error))
+            // For stdio servers, the child often writes the real reason to
+            // stderr (e.g. "env: node: No such file or directory") before
+            // dying; surface it alongside the transport error.
+            var message = Self.describe(error)
+            if let stdio = transport as? StdioMCPTransport, let err = await stdio.drainStderr() {
+                message += " — \(err)"
+            }
+            status[record.id] = .failed(message)
         }
     }
 
