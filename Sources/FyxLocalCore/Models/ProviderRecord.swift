@@ -9,12 +9,17 @@ import Foundation
 public enum LLMAPIKind: String, Sendable, Hashable, Codable, CaseIterable {
     /// OpenAI Responses API (`/responses`, SSE). The original/default.
     case openAIResponses = "openai-responses"
+    /// OpenAI Chat Completions API (`/chat/completions`, SSE). The broadly
+    /// supported endpoint; required for image input on many OpenAI-compatible
+    /// servers (e.g. vLLM/stepfun) whose `/responses` is text-only.
+    case openAIChatCompletions = "openai-chat-completions"
     /// Anthropic Messages API (`/messages`, SSE, `x-api-key` auth).
     case anthropicMessages = "anthropic-messages"
 
     public var displayName: String {
         switch self {
         case .openAIResponses: return "OpenAI (Responses)"
+        case .openAIChatCompletions: return "OpenAI (Chat Completions)"
         case .anthropicMessages: return "Anthropic (Messages)"
         }
     }
@@ -24,7 +29,7 @@ public enum LLMAPIKind: String, Sendable, Hashable, Codable, CaseIterable {
     /// Anthropic points at the public API by default.
     public var defaultBaseURL: String {
         switch self {
-        case .openAIResponses: return "https://"
+        case .openAIResponses, .openAIChatCompletions: return "https://"
         case .anthropicMessages: return "https://api.anthropic.com/v1"
         }
     }
@@ -101,6 +106,35 @@ public struct ProviderRecord: Identifiable, Sendable, Hashable, Codable {
         self.context = try c.decode(ProviderContextSettings.self, forKey: .context, default: .init())
         self.requestTimeout = try c.decode(TimeInterval.self, forKey: .requestTimeout, default: ProviderRecord.defaultRequestTimeout)
         self.apiKind = try c.decode(LLMAPIKind.self, forKey: .apiKind, default: .openAIResponses)
+    }
+}
+
+extension ProviderRecord {
+    /// The user's saved override for a model id, if any.
+    public func modelOverride(for modelID: String) -> ModelOverride? {
+        modelOverrides.first { $0.modelID == modelID }
+    }
+
+    /// Apply this provider's per-model override onto a detected `ModelInfo`,
+    /// returning the effective capabilities the app should use. Detected models
+    /// carry catalog-derived defaults (e.g. `supportsVision` from
+    /// `KnownModelCatalog`); a user override takes precedence when present.
+    /// Currently overlays `supportsVision` (the field the UI exposes); other
+    /// override fields can be folded in here later.
+    public func effectiveModelInfo(_ detected: ModelInfo) -> ModelInfo {
+        guard let o = modelOverride(for: detected.id) else { return detected }
+        var m = detected
+        m.supportsVision = o.supportsVision
+        return m
+    }
+
+    /// Whether `modelID` accepts image input, honouring a user override and
+    /// falling back to the detected model's capability (catalog default), then
+    /// to the known catalog when the model isn't in the detected list.
+    public func acceptsImages(modelID: String, detected: [ModelInfo]) -> Bool {
+        if let o = modelOverride(for: modelID) { return o.supportsVision }
+        if let d = detected.first(where: { $0.id == modelID }) { return d.supportsVision }
+        return false
     }
 }
 

@@ -253,6 +253,22 @@ private struct ProviderCard: View {
                         .foregroundStyle(.secondary)
                 }
 
+                // Per-model "accepts images" toggle for the default model. Vision
+                // support can't be detected from the /models endpoint, so this
+                // lets the user mark a model as image-capable; it gates the
+                // composer's image-attach affordance. Defaults to the known
+                // catalog guess, overridable here.
+                if let modelID = record.defaultModel, !modelID.isEmpty {
+                    LabeledRow(label: "Image input") {
+                        Toggle("This model accepts images", isOn: visionBinding(for: modelID))
+                            .labelsHidden()
+                            .toggleStyle(.switch)
+                    }
+                    Text("Enables attaching images to messages for this model.")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+
                 Divider().padding(.vertical, 4)
 
                 SamplingSection(sampling: Binding(
@@ -325,6 +341,30 @@ private struct ProviderCard: View {
             set: { newValue in
                 var updated = record
                 updated.defaultModel = newValue
+                record = updated
+            }
+        )
+    }
+
+    /// Bind the "accepts images" toggle to the model's `ModelOverride`. Reads an
+    /// existing override, else the detected model's catalog-default vision flag.
+    /// Writes by upserting the override (preserving its other fields).
+    private func visionBinding(for modelID: String) -> Binding<Bool> {
+        Binding(
+            get: {
+                if let o = record.modelOverride(for: modelID) { return o.supportsVision }
+                let detected = environment.detectedModels[record.id] ?? []
+                return detected.first(where: { $0.id == modelID })?.supportsVision ?? false
+            },
+            set: { newValue in
+                var updated = record
+                if let idx = updated.modelOverrides.firstIndex(where: { $0.modelID == modelID }) {
+                    updated.modelOverrides[idx].supportsVision = newValue
+                } else {
+                    updated.modelOverrides.append(
+                        ModelOverride(modelID: modelID, supportsVision: newValue)
+                    )
+                }
                 record = updated
             }
         )
@@ -423,7 +463,9 @@ private struct AddProviderSheet: View {
             )
         }
         .padding(20)
-        .frame(width: 420)
+        // Wide enough for the segmented API-type picker to show all three
+        // options (incl. "OpenAI (Chat Completions)") without truncation.
+        .frame(width: 520)
     }
 }
 

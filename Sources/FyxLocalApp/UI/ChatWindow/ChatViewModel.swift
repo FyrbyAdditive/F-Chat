@@ -19,6 +19,12 @@ final class ChatViewModel {
     var draftText: String = "" {
         didSet { scheduleProjectionRefresh() }
     }
+    /// Pending attachments staged in the composer for the next send (images for
+    /// vision models, text files inlined for any model). Session-only; cleared
+    /// on send. Drives the chip row in the composer.
+    var draftAttachments: [PendingAttachment] = [] {
+        didSet { scheduleProjectionRefresh() }
+    }
     var isStreaming: Bool = false
     /// Per-conversation transient error attached to whichever user message
     /// it relates to. Cleared on retry.
@@ -155,7 +161,9 @@ final class ChatViewModel {
     // MARK: - Send
 
     func send() {
-        guard !draftText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        // Allow sending with attachments and no text (e.g. "describe this image").
+        guard !draftText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || !draftAttachments.isEmpty else { return }
         guard let environment else { return }
         guard let providerRecord = environment.currentProvider() else {
             lastError = String(localized: "No provider configured. Open Settings → Providers.")
@@ -170,26 +178,50 @@ final class ChatViewModel {
         }
 
         let userText = draftText
+        let attachments = draftAttachments
         draftText = ""
+        draftAttachments = []
         lastError = nil
         failedUserMessageID = nil
 
-        let userMessage = Message(role: .user, contentItems: [.text(userText)])
+        // Build the user message: attachments first (images as BlobStore-backed
+        // .image content; text files inlined as filename-prefixed .text), then
+        // the typed text. Text files are inlined because the wire input shape
+        // has no first-class file part — the model just sees their contents.
+        var contentItems: [MessageContent] = []
+        for att in attachments {
+            switch att.kind {
+            case .image(let data, let mimeType):
+                contentItems.append(.image(data: data, mimeType: mimeType))
+            case .textFile(let contents):
+                contentItems.append(.text("\(att.filename):\n\(contents)"))
+            }
+        }
+        if !userText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            contentItems.append(.text(userText))
+        }
+        let userMessage = Message(role: .user, contentItems: contentItems)
         conversation.messages.append(userMessage)
         conversation.updatedAt = .now
         let userMessageID = userMessage.id
 
         // Oversized-single-message check — refuse to send if the user
-        // message alone exceeds the budget. Their text stays in the
-        // composer (we already cleared draftText; restore it).
+        // message alone exceeds the budget. Count the typed text plus any
+        // inlined text-file contents (images are counted by the builder).
+        // On rejection, restore both the text and the attachments to the
+        // composer (we already cleared them).
         let modelInfo = environment.detectedModels[providerRecord.id]?.first(where: { $0.id == trimmedModel })
         let budget = ContextBudget.resolve(settings: providerRecord.context, model: modelInfo)
         let tokenizer = TokenizerCache.shared.get(modelID: trimmedModel)
-        let userMessageTokens = tokenizer.countTokens(in: userText)
+        let countedText = contentItems.reduce(into: "") { acc, item in
+            if case .text(let t) = item { acc += t + "\n" }
+        }
+        let userMessageTokens = tokenizer.countTokens(in: countedText)
         if userMessageTokens > budget.effectiveWindow {
-            // Roll back the queued user message.
+            // Roll back the queued user message and restore the composer.
             conversation.messages.removeAll { $0.id == userMessageID }
             draftText = userText
+            draftAttachments = attachments
             lastError = String(
                 localized: "Your message is \(userMessageTokens.formatted()) tokens — larger than this provider's \(budget.effectiveWindow.formatted())-token window. Save it as a RAG document instead (coming soon)."
             )
@@ -675,6 +707,89 @@ final class ChatViewModel {
         }
         conversation.messages[assistantIndex] = message
         conversation.updatedAt = .now
+    }
+}
+
+// MARK: - Composer attachments
+
+/// An item staged in the composer for the next send.
+struct PendingAttachment: Identifiable, Hashable {
+    enum Kind: Hashable {
+        case image(data: Data, mimeType: String)
+        case textFile(contents: String)
+    }
+    let id = UUID()
+    let filename: String
+    let kind: Kind
+
+    var isImage: Bool { if case .image = kind { return true }; return false }
+}
+
+extension ChatViewModel {
+    /// Max size for an inlined text-file attachment. Larger files are refused so
+    /// a giant file can't silently blow the context window.
+    static let maxTextAttachmentBytes = 1_000_000  // ~1 MB
+
+    /// Whether the active provider's default model accepts image input (user
+    /// override, else the detected/catalog capability). Gates the composer's
+    /// image-attach affordance.
+    var activeModelAcceptsImages: Bool {
+        guard let environment,
+              let provider = environment.currentProvider(),
+              let model = provider.defaultModel, !model.isEmpty
+        else { return false }
+        let detected = environment.detectedModels[provider.id] ?? []
+        return provider.acceptsImages(modelID: model, detected: detected)
+    }
+
+    /// True when there's something to send (text or attachments) and we're idle.
+    var canSend: Bool {
+        !isStreaming
+            && (!draftText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                || !draftAttachments.isEmpty)
+    }
+
+    /// Ingest a picked/dropped file into a pending attachment. Images are only
+    /// accepted when the active model supports vision; text files always. Returns
+    /// an error string to surface in the composer, or nil on success.
+    @discardableResult
+    func addAttachment(from url: URL) -> String? {
+        let filename = url.lastPathComponent
+        guard let data = try? Data(contentsOf: url) else {
+            return String(localized: "Couldn't read \(filename).")
+        }
+        if let mime = Self.imageMimeType(for: url) {
+            guard activeModelAcceptsImages else {
+                return String(localized: "This model doesn't accept images. Enable image input for it in Settings → Providers.")
+            }
+            draftAttachments.append(PendingAttachment(filename: filename, kind: .image(data: data, mimeType: mime)))
+            return nil
+        }
+        // Treat everything else as a text file: inline its contents.
+        guard data.count <= Self.maxTextAttachmentBytes else {
+            return String(localized: "\(filename) is too large to attach as text (over 1 MB).")
+        }
+        guard let contents = String(data: data, encoding: .utf8) else {
+            return String(localized: "\(filename) isn't a readable text file.")
+        }
+        draftAttachments.append(PendingAttachment(filename: filename, kind: .textFile(contents: contents)))
+        return nil
+    }
+
+    func removeAttachment(_ attachment: PendingAttachment) {
+        draftAttachments.removeAll { $0.id == attachment.id }
+    }
+
+    /// Image MIME type for a file URL by extension, or nil if not a supported image.
+    static func imageMimeType(for url: URL) -> String? {
+        switch url.pathExtension.lowercased() {
+        case "png": return "image/png"
+        case "jpg", "jpeg": return "image/jpeg"
+        case "gif": return "image/gif"
+        case "webp": return "image/webp"
+        case "heic": return "image/heic"
+        default: return nil
+        }
     }
 }
 

@@ -22,6 +22,33 @@ struct ProviderDecodersTests {
         #expect(models[1].contextWindow == nil)
     }
 
+    @Test func knownModelCatalogDetectsVision() {
+        // Vision-capable families → true.
+        for id in ["llava-1.6", "step-3.7-flash", "stepfun-x", "qwen2.5-vl-7b",
+                   "pixtral-12b", "gpt-4o", "claude-3-5-sonnet", "internvl2-8b"] {
+            #expect(KnownModelCatalog.supportsVision(for: id), "\(id) should be vision")
+        }
+        // Text-only families → false.
+        for id in ["llama-3-70b", "qwen2.5-7b", "mistral-7b", "gpt-3.5-turbo",
+                   "minimax-m2.7", "deepseek-v3"] {
+            #expect(!KnownModelCatalog.supportsVision(for: id), "\(id) should NOT be vision")
+        }
+    }
+
+    @Test func decodeDefaultsVisionFromCatalog() throws {
+        let json = #"""
+        {"data":[
+            {"id":"step-3.7-flash"},
+            {"id":"llama-3-70b"}
+        ]}
+        """#
+        let models = try OpenAIResponsesProvider.decodeModels(json.data(using: .utf8)!)
+        let step = models.first { $0.id == "step-3.7-flash" }
+        let llama = models.first { $0.id == "llama-3-70b" }
+        #expect(step?.supportsVision == true)    // catalog default
+        #expect(llama?.supportsVision == false)
+    }
+
     @Test func decodesVLLMMaxModelLen() throws {
         // vLLM emits max_model_len rather than context_window. The decoder
         // must pick it up so we don't fall through to the 8k fallback for
