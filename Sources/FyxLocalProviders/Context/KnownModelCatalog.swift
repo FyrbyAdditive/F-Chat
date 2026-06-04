@@ -20,6 +20,38 @@ public enum KnownModelCatalog {
         return nil
     }
 
+    /// Best-effort default for whether a model accepts image input. OpenAI-
+    /// compatible `/models` endpoints (vLLM etc.) don't report vision support,
+    /// so we match against known vision-capable families. Conservative — the
+    /// user can always override per-model in Settings → Providers. Substring
+    /// match (not prefix): vision markers like `-vl` / `vision` appear mid-id.
+    public static func supportsVision(for modelID: String) -> Bool {
+        let lower = modelID.lowercased()
+        return visionMarkers.contains { lower.contains($0) }
+    }
+
+    /// Substrings that signal a vision-capable model. Kept narrow on purpose.
+    private static let visionMarkers: [String] = [
+        "llava",
+        "stepfun",       // StepFun (e.g. step-3.7-flash) accepts images
+        "step-3",
+        "pixtral",
+        "-vl",           // Qwen2-VL, Qwen2.5-VL, InternVL, etc.
+        "vl-",
+        "vision",
+        "gpt-4o",        // OpenAI multimodal
+        "gpt-4.1",
+        "gpt-4-turbo",
+        "gpt-5",
+        "claude-3",      // Claude 3.x + 4 are multimodal
+        "claude-opus-4",
+        "claude-sonnet-4",
+        "claude-haiku-4",
+        "gemini",        // Gemini family is multimodal
+        "internvl",
+        "minicpm-v",
+    ]
+
     /// Sorted by prefix length descending so longest match wins.
     private static let entriesByLongestPrefix: [(String, Int)] = entries.sorted {
         $0.0.count > $1.0.count

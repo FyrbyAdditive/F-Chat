@@ -4,7 +4,14 @@
 import Foundation
 import FyxLocalCore
 
-public struct OpenAIResponsesProvider: LLMProvider {
+/// OpenAI **Chat Completions** API provider (`/chat/completions`, SSE).
+///
+/// A peer of `OpenAIResponsesProvider`. Many OpenAI-compatible servers
+/// (vLLM, Ollama, LM Studio, stepfun) implement Chat Completions most
+/// completely — in particular **image input** works here on servers whose
+/// `/responses` endpoint is text-only. `/models` and `/embeddings` are the same
+/// across both, so those are reused from the Responses provider.
+public struct OpenAIChatCompletionsProvider: LLMProvider {
     public let id: ProviderID
     public let baseURL: URL
     public let session: URLSession
@@ -30,46 +37,10 @@ public struct OpenAIResponsesProvider: LLMProvider {
         request.httpMethod = "GET"
         try await applyAuth(&request)
         for (k, v) in extraHeaders { request.setValue(v, forHTTPHeaderField: k) }
-
         let (data, response) = try await session.data(for: request)
         try ProviderHTTP.validate(response: response, body: data)
-        return try Self.decodeModels(data)
-    }
-
-    static func decodeModels(_ data: Data) throws -> [ModelInfo] {
-        struct ListResponse: Decodable {
-            struct Model: Decodable {
-                let id: String
-                let owned_by: String?
-                // Different servers report the context window under different
-                // names. Try the lot in priority order.
-                let context_window: Int?
-                let max_model_len: Int? // vLLM
-                let context_length: Int? // llama.cpp, ollama, some others
-                let max_context_length: Int?
-                let max_output_tokens: Int?
-                let max_tokens: Int?
-            }
-            let data: [Model]
-        }
-        let parsed = try JSONDecoder().decode(ListResponse.self, from: data)
-        return parsed.data.map { m in
-            let serverWindow = m.context_window
-                ?? m.max_model_len
-                ?? m.context_length
-                ?? m.max_context_length
-            let resolvedWindow = serverWindow ?? KnownModelCatalog.contextWindow(for: m.id)
-            let serverMaxOut = m.max_output_tokens ?? m.max_tokens
-            return ModelInfo(
-                id: m.id,
-                displayName: m.id,
-                contextWindow: resolvedWindow,
-                maxOutputTokens: serverMaxOut,
-                // /models doesn't report vision support; default from the known
-                // catalog. The user can override per-model in Settings.
-                supportsVision: KnownModelCatalog.supportsVision(for: m.id)
-            )
-        }
+        // `/models` is identical to the Responses provider — reuse its decoder.
+        return try OpenAIResponsesProvider.decodeModels(data)
     }
 
     public func embed(_ texts: [String], model: String) async throws -> [[Float]] {
@@ -78,23 +49,20 @@ public struct OpenAIResponsesProvider: LLMProvider {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         try await applyAuth(&request)
         for (k, v) in extraHeaders { request.setValue(v, forHTTPHeaderField: k) }
-
         let body: [String: Any] = ["model": model, "input": texts]
         request.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
-
         let (data, response) = try await session.data(for: request)
         try ProviderHTTP.validate(response: response, body: data)
         return try ProviderHTTP.decodeEmbeddings(data, expectedCount: texts.count)
     }
 
     public func streamResponse(_ request: ChatRequest) -> AsyncThrowingStream<StreamEvent, Error> {
-        // Provider-specific request + decoder; shared streamer drives the rest.
-        // OpenAI ends its stream with a literal `data: [DONE]`.
+        // Chat Completions ends its stream with a literal `data: [DONE]`.
         streamSSE(
             session: session,
             makeRequest: { try await self.makeStreamRequest(request) },
             makeDecode: {
-                let decoder = OpenAIResponsesEventDecoder()
+                let decoder = OpenAIChatCompletionsEventDecoder()
                 return { try decoder.decode($0) }
             },
             isDone: { $0.data == "[DONE]" }
@@ -102,13 +70,13 @@ public struct OpenAIResponsesProvider: LLMProvider {
     }
 
     private func makeStreamRequest(_ request: ChatRequest) async throws -> URLRequest {
-        var urlReq = URLRequest(url: baseURL.appending(path: "responses"))
+        var urlReq = URLRequest(url: baseURL.appending(path: "chat/completions"))
         urlReq.httpMethod = "POST"
         urlReq.setValue("application/json", forHTTPHeaderField: "Content-Type")
         urlReq.setValue("text/event-stream", forHTTPHeaderField: "Accept")
         try await applyAuth(&urlReq)
         for (k, v) in extraHeaders { urlReq.setValue(v, forHTTPHeaderField: k) }
-        urlReq.httpBody = try OpenAIResponsesRequestEncoder().encode(request, stream: true)
+        urlReq.httpBody = try OpenAIChatCompletionsRequestEncoder().encode(request, stream: true)
         return urlReq
     }
 

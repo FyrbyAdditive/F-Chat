@@ -348,6 +348,13 @@ final class AppEnvironment {
                 session: session,
                 secretStore: secretStore
             )
+        case .openAIChatCompletions:
+            return OpenAIChatCompletionsProvider(
+                id: record.id,
+                baseURL: record.baseURL,
+                session: session,
+                secretStore: secretStore
+            )
         case .anthropicMessages:
             return AnthropicMessagesProvider(
                 id: record.id,

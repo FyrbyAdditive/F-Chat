@@ -2,11 +2,14 @@
 // Copyright (C) 2026 Tim Ellis / Fyrby Additive Manufacturing & Engineering
 
 import SwiftUI
+import UniformTypeIdentifiers
 import FyxLocalCore
 
 struct ComposerView: View {
     @Bindable var viewModel: ChatViewModel
     @FocusState private var focused: Bool
+    @State private var showingImporter = false
+    @State private var attachError: String?
 
     var body: some View {
         VStack(spacing: 6) {
@@ -33,7 +36,29 @@ struct ComposerView: View {
                 }
                 .padding(.horizontal, 4)
             }
+            if let attachError {
+                Label(attachError, systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption)
+                    .foregroundStyle(.red)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 4)
+            }
+            if !viewModel.draftAttachments.isEmpty {
+                attachmentChips
+            }
             HStack(alignment: .bottom, spacing: 8) {
+                // Attach button: images (when the model accepts them) + text files.
+                Button {
+                    attachError = nil
+                    showingImporter = true
+                } label: {
+                    Image(systemName: "paperclip")
+                        .font(.system(size: 16, weight: .medium))
+                        .frame(width: 30, height: 30)
+                }
+                .buttonStyle(.plain)
+                .help("Attach an image or text file")
+
                 // TextField(axis: .vertical) starts at one line and grows up
                 // to lineLimit before scrolling, unlike TextEditor which is
                 // multi-line from the start. Bare Return submits; Shift+Return
@@ -60,12 +85,80 @@ struct ComposerView: View {
                 }
                 .buttonStyle(.plain)
                 .keyboardShortcut(.return, modifiers: [.command])
-                .disabled(!viewModel.isStreaming && viewModel.draftText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .disabled(!viewModel.isStreaming && !viewModel.canSend)
             }
             composerToolbar
         }
         .padding(DesignTokens.panelPadding)
         .onAppear { focused = true }
+        .fileImporter(
+            isPresented: $showingImporter,
+            allowedContentTypes: importerContentTypes,
+            allowsMultipleSelection: true
+        ) { result in
+            handlePicked(result)
+        }
+        // Drag-and-drop files onto the composer.
+        .dropDestination(for: URL.self) { urls, _ in
+            ingest(urls)
+            return true
+        }
+    }
+
+    /// Chips for pending attachments, each removable.
+    @ViewBuilder
+    private var attachmentChips: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                ForEach(viewModel.draftAttachments) { att in
+                    HStack(spacing: 4) {
+                        Image(systemName: att.isImage ? "photo" : "doc.text")
+                            .font(.caption)
+                        Text(att.filename)
+                            .font(.caption)
+                            .lineLimit(1)
+                        Button {
+                            viewModel.removeAttachment(att)
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(.regularMaterial, in: Capsule())
+                }
+            }
+            .padding(.horizontal, 4)
+        }
+    }
+
+    /// File types the picker offers: text always; images only when supported.
+    private var importerContentTypes: [UTType] {
+        var types: [UTType] = [.plainText, .sourceCode, .json, .commaSeparatedText, .text]
+        if viewModel.activeModelAcceptsImages { types.append(.image) }
+        return types
+    }
+
+    private func handlePicked(_ result: Result<[URL], Error>) {
+        switch result {
+        case .success(let urls): ingest(urls)
+        case .failure(let error): attachError = error.localizedDescription
+        }
+    }
+
+    /// Route each file through the view model, surfacing the first error.
+    private func ingest(_ urls: [URL]) {
+        for url in urls {
+            // Security-scoped access for sandbox-picked files; harmless otherwise.
+            let scoped = url.startAccessingSecurityScopedResource()
+            defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+            if let err = viewModel.addAttachment(from: url) {
+                attachError = err
+            }
+        }
     }
 
     @ViewBuilder
@@ -93,8 +186,8 @@ struct ComposerView: View {
             viewModel.cancel()
             return
         }
-        let trimmed = viewModel.draftText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
+        guard viewModel.canSend else { return }
+        attachError = nil
         viewModel.send()
     }
 }

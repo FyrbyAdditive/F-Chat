@@ -80,7 +80,8 @@ public struct AnthropicMessagesProvider: LLMProvider {
             ModelInfo(
                 id: m.id,
                 displayName: m.display_name ?? m.id,
-                contextWindow: KnownModelCatalog.contextWindow(for: m.id)
+                contextWindow: KnownModelCatalog.contextWindow(for: m.id),
+                supportsVision: KnownModelCatalog.supportsVision(for: m.id)
             )
         }
         return (models, parsed.has_more ?? false, parsed.last_id)

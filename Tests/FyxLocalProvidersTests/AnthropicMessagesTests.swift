@@ -274,6 +274,8 @@ struct ProviderRecordAPIKindTests {
     @Test func apiKindDefaultsAndHelpers() {
         #expect(LLMAPIKind.anthropicMessages.defaultBaseURL == "https://api.anthropic.com/v1")
         #expect(LLMAPIKind.openAIResponses.defaultBaseURL == "https://")
-        #expect(LLMAPIKind.allCases.count == 2)
+        #expect(LLMAPIKind.openAIChatCompletions.defaultBaseURL == "https://")
+        #expect(LLMAPIKind.openAIChatCompletions.displayName == "OpenAI (Chat Completions)")
+        #expect(LLMAPIKind.allCases.count == 3)
     }
 }
