@@ -54,9 +54,56 @@ public protocol CollectionStoreProtocol: Actor {
 
     /// Embed the query, run ANN, return ranked chunk ids + similarity scores.
     func search(query: String, in collectionID: CollectionID, topK: Int) async throws -> [VectorSearchHit]
+
+    /// Keyword (BM25 / full-text) search over chunk text, ranked best-first.
+    /// Returns chunk ids only (the `score` field carries BM25 rank-order, not a
+    /// comparable magnitude — hybrid fusion uses ranks). Stores without a
+    /// full-text index return `[]` (the default), which makes hybrid search
+    /// degrade cleanly to vector-only.
+    func keywordSearch(query: String, in collectionID: CollectionID, topK: Int) async throws -> [VectorSearchHit]
+
+    /// Hybrid retrieval: vector KNN + keyword search fused with Reciprocal Rank
+    /// Fusion. The default implementation runs both over a widened candidate
+    /// pool and fuses; it falls back to pure vector when keyword returns nothing
+    /// (or isn't supported). Returns the fused top-K chunk ids.
+    func hybridSearch(query: String, in collectionID: CollectionID, topK: Int) async throws -> [VectorSearchHit]
 }
 
 public extension CollectionStoreProtocol {
+    /// Default: no full-text index → no keyword hits. `PersistentCollectionStore`
+    /// overrides this with an FTS5-backed implementation.
+    func keywordSearch(query: String, in collectionID: CollectionID, topK: Int) async throws -> [VectorSearchHit] {
+        []
+    }
+
+    /// Default hybrid: widen the candidate pool, run vector + keyword, fuse with
+    /// RRF. Degrades to vector-only when keyword yields nothing. Shared by every
+    /// store so the in-memory and SQLite paths behave identically (the in-memory
+    /// store simply has no keyword hits, so it returns the vector order).
+    func hybridSearch(query: String, in collectionID: CollectionID, topK: Int) async throws -> [VectorSearchHit] {
+        // Pull a wider pool from each retriever so fusion has room to reorder.
+        let poolK = max(topK * 4, topK)
+        let vectorHits = (try? await search(query: query, in: collectionID, topK: poolK)) ?? []
+        let keywordHits = (try? await keywordSearch(query: query, in: collectionID, topK: poolK)) ?? []
+
+        guard !keywordHits.isEmpty else {
+            // No keyword signal → plain vector order (already best-first).
+            return Array(vectorHits.prefix(topK))
+        }
+
+        let fusedIDs = HybridFusion.reciprocalRankFusion([
+            vectorHits.map(\.chunkID),
+            keywordHits.map(\.chunkID),
+        ])
+        // Carry a representative score for downstream display: prefer the
+        // vector cosine if the chunk had one, else the keyword rank score.
+        let vectorScore = Dictionary(vectorHits.map { ($0.chunkID, $0.score) }, uniquingKeysWith: { a, _ in a })
+        let keywordScore = Dictionary(keywordHits.map { ($0.chunkID, $0.score) }, uniquingKeysWith: { a, _ in a })
+        return fusedIDs.prefix(topK).map { id in
+            VectorSearchHit(chunkID: id, score: vectorScore[id] ?? keywordScore[id] ?? 0)
+        }
+    }
+
     func createCollection(
         name: String,
         embedder: any Embedder,

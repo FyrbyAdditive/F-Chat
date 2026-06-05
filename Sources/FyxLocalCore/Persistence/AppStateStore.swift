@@ -108,6 +108,10 @@ public struct PersistedAppState: Codable, Sendable {
     /// files live on disk under the SkillStore directory keyed by id — only
     /// the parsed metadata + instruction body persist here.
     public var skills: [Skill]?
+    /// Whether RAG search runs the on-device cross-encoder rerank pass over
+    /// hybrid results. Optional/missing on older state files; resolves to
+    /// `true` at runtime (rerank on by default).
+    public var ragRerankEnabled: Bool?
 
     public init(
         version: Int = StateMigrations.currentVersion,
@@ -120,7 +124,8 @@ public struct PersistedAppState: Codable, Sendable {
         agents: [Agent]? = nil,
         defaultAgentForNewChats: AgentID? = nil,
         mcpServers: [MCPServerRecord]? = nil,
-        skills: [Skill]? = nil
+        skills: [Skill]? = nil,
+        ragRerankEnabled: Bool? = nil
     ) {
         self.version = version
         self.providers = providers
@@ -133,5 +138,6 @@ public struct PersistedAppState: Codable, Sendable {
         self.defaultAgentForNewChats = defaultAgentForNewChats
         self.mcpServers = mcpServers
         self.skills = skills
+        self.ragRerankEnabled = ragRerankEnabled
     }
 }

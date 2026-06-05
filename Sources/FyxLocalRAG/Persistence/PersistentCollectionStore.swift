@@ -309,6 +309,36 @@ public actor PersistentCollectionStore: CollectionStoreProtocol {
         return try await store.search(query: vectors[0], topK: topK)
     }
 
+    /// FTS5 keyword search over chunk text, scoped to one collection. Joins the
+    /// global `chunks_fts` index back to `chunks` (via rowid) and `documents`
+    /// (to filter by collection). `bm25()` returns lower = more relevant, so we
+    /// ORDER BY it ascending and map to a descending rank score for the fusion
+    /// layer. Returns [] when the query has no usable terms.
+    public func keywordSearch(query: String, in collectionID: CollectionID, topK: Int) async throws -> [VectorSearchHit] {
+        guard topK > 0 else { return [] }
+        guard let match = HybridFusion.sanitizedMatchQuery(query) else { return [] }
+        let collIDStr = collectionID.rawValue.uuidString
+        return try await database.queue.read { db in
+            let rows = try Row.fetchAll(db, sql: """
+                SELECT c.id AS chunk_id, bm25(chunks_fts) AS rank
+                FROM chunks_fts
+                JOIN chunks    c ON c.rowid = chunks_fts.rowid
+                JOIN documents d ON d.id = c.document_id
+                WHERE chunks_fts MATCH ? AND d.collection_id = ?
+                ORDER BY rank
+                LIMIT ?
+                """, arguments: [match, collIDStr, topK])
+            return rows.enumerated().compactMap { idx, row -> VectorSearchHit? in
+                guard let key: String = row["chunk_id"], let uuid = UUID(uuidString: key) else { return nil }
+                // bm25 magnitude isn't comparable to cosine; expose a simple
+                // descending rank score so display has *something*, but fusion
+                // uses position, not this value.
+                let score = Float(topK - idx)
+                return VectorSearchHit(chunkID: ChunkID(rawValue: uuid), score: score)
+            }
+        }
+    }
+
     // MARK: - Lazy embedders / stores
 
     private func embedderForCollection(_ collection: RAGCollection) async throws -> any Embedder {

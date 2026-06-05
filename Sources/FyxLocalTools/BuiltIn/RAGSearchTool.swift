@@ -38,6 +38,17 @@ public struct RAGSearchHit: Sendable, Hashable, Codable {
     }
 }
 
+/// Re-orders candidate hits by relevance to the query (a cross-encoder pass).
+/// Lives in the Tools layer so `CollectionStoreRetriever` can hold one without
+/// depending on the MLX layer directly; the concrete MLX implementation is
+/// injected from the app. Implementations MUST degrade gracefully — on any
+/// failure they should return the input order rather than throw, so rag_search
+/// never errors just because the reranker is unavailable.
+public protocol RAGReranker: Sendable {
+    /// Return `hits` re-ordered best-first for `query`, truncated to `topK`.
+    func rerank(query: String, hits: [RAGSearchHit], topK: Int) async -> [RAGSearchHit]
+}
+
 public struct RAGSearchTool: Tool {
     public let name = "rag_search"
     public let retriever: any RAGRetriever

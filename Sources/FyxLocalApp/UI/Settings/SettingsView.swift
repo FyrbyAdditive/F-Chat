@@ -478,6 +478,7 @@ private struct ToolsTab: View {
     @State private var appleExpanded = true
     @State private var webExpanded = true
     @State private var utilitiesExpanded = true
+    @State private var ragExpanded = true
 
     var body: some View {
         // Grouped Form (same style as every other Settings tab) for the native
@@ -571,6 +572,25 @@ private struct ToolsTab: View {
                 }
             } footer: {
                 Text("Disabled tools are not advertised to the model and cannot be invoked.")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
+                DisclosureGroup(isExpanded: $ragExpanded) {
+                    Toggle(isOn: $environment.ragRerankEnabled) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Rerank search results")
+                            Text("Runs an on-device model to re-order document-search results by relevance after keyword+vector retrieval. More relevant results; uses a little more memory and time per search.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                } label: {
+                    Text("Document search (RAG)").font(.headline)
+                }
+            } footer: {
+                Text("Hybrid keyword + semantic search is always on. The reranker is bundled and runs locally — nothing leaves your Mac.")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }

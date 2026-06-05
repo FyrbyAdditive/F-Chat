@@ -8179,6 +8179,122 @@
           }
         }
       }
+    },
+    "Document search (RAG)": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Document search (RAG)"
+          }
+        },
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Document search (RAG)"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dokumentsökning (RAG)"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dokumentsøgning (RAG)"
+          }
+        }
+      }
+    },
+    "Rerank search results": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rerank search results"
+          }
+        },
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rerank search results"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Omordna sökresultat"
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Omarranger søgeresultater"
+          }
+        }
+      }
+    },
+    "Hybrid keyword + semantic search is always on. The reranker is bundled and runs locally — nothing leaves your Mac.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hybrid keyword + semantic search is always on. The reranker is bundled and runs locally — nothing leaves your Mac."
+          }
+        },
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hybrid keyword + semantic search is always on. The reranker is bundled and runs locally — nothing leaves your Mac."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hybrid nyckelord- och semantisk sökning är alltid på. Omordnaren är inbyggd och körs lokalt – inget lämnar din Mac."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hybrid nøgleord- og semantisk søgning er altid slået til. Omarrangeringen er indbygget og kører lokalt – intet forlader din Mac."
+          }
+        }
+      }
+    },
+    "Runs an on-device model to re-order document-search results by relevance after keyword+vector retrieval. More relevant results; uses a little more memory and time per search.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Runs an on-device model to re-order document-search results by relevance after keyword+vector retrieval. More relevant results; uses a little more memory and time per search."
+          }
+        },
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Runs an on-device model to re-order document-search results by relevance after keyword+vector retrieval. More relevant results; uses a little more memory and time per search."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kör en modell på enheten för att omordna dokumentsökningens resultat efter relevans, efter nyckelord- och vektorsökning. Mer relevanta resultat; använder lite mer minne och tid per sökning."
+          }
+        },
+        "da": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kører en model på enheden for at omarrangere dokumentsøgningens resultater efter relevans, efter nøgleord- og vektorsøgning. Mere relevante resultater; bruger lidt mere hukommelse og tid pr. søgning."
+          }
+        }
+      }
     }
   }
 }

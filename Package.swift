@@ -97,6 +97,10 @@ let package = Package(
                 .product(name: "GRDB", package: "GRDB.swift"),
                 .product(name: "MLXEmbedders", package: "mlx-swift-lm"),
                 .product(name: "MLXHuggingFace", package: "mlx-swift-lm"),
+                // Causal-LM path for the reranker: Qwen3-Reranker is a
+                // Qwen3ForCausalLM scored by the yes/no token logits.
+                .product(name: "MLXLLM", package: "mlx-swift-lm"),
+                .product(name: "MLXLMCommon", package: "mlx-swift-lm"),
                 // Tokenizer macros expand to Tokenizers.AutoTokenizer.from(...)
                 // at the call site, so this module must be on the FyxLocalRAG
                 // dep list even though we never name it directly in code.
@@ -104,13 +108,13 @@ let package = Package(
                 // ZIP reader for DOCX/PPTX (Office Open XML are ZIP archives).
                 .product(name: "ZIPFoundation", package: "ZIPFoundation"),
             ],
-            // Bundle the Qwen3-Embedding-4B-4bit-DWQ model weights so the
-            // app is self-contained — no first-run Hugging Face download.
-            // Adds ~2.1 GB to the app bundle. Tracked via git-lfs at the
-            // repo level so checkouts pull binaries from LFS, not bloat
-            // the main git history.
+            // Bundle the Qwen3-Embedding-4B-4bit-DWQ embedder (~2.1 GB) and the
+            // Qwen3-Reranker-0.6B-mxfp8 reranker (~614 MB) so the app is
+            // self-contained — no first-run Hugging Face download. Tracked via
+            // git-lfs so checkouts pull binaries from LFS, not the main history.
             resources: [
                 .copy("Resources/Qwen3-Embedding-4B-4bit-DWQ"),
+                .copy("Resources/Qwen3-Reranker-0.6B-mxfp8"),
             ]
         ),
         .executableTarget(

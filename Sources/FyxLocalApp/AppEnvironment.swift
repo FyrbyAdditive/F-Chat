@@ -115,6 +115,15 @@ final class AppEnvironment {
     /// On-disk storage for skill packages (unpack/import/create/delete) and the
     /// working directories the code-execution sandbox runs in.
     let skillStore: SkillStore
+    /// Whether RAG search runs the on-device cross-encoder rerank pass over
+    /// hybrid results. On by default; user-toggleable in Settings. Persisted.
+    var ragRerankEnabled: Bool = true {
+        didSet { scheduleSave() }
+    }
+    /// The on-device reranker, loaded lazily on first RAG search when
+    /// `ragRerankEnabled`. Held here so it persists across turns once loaded.
+    /// nil until loaded / when disabled / under FCHAT_SKIP_MLX.
+    var ragReranker: (any RAGReranker)?
     /// Session-scoped MCP connections + their registered tool adapters.
     /// Constructed once in `init`, idempotent `ensureLoaded` walks the
     /// `mcpServers` list on first chat send.
@@ -236,6 +245,7 @@ final class AppEnvironment {
             self.defaultAgentForNewChats = snapshot.defaultAgentForNewChats
             self.mcpServers = snapshot.mcpServers ?? []
             self.skills = snapshot.skills ?? []
+            self.ragRerankEnabled = snapshot.ragRerankEnabled ?? true
         } else {
             self.providerRecords = AppEnvironment.defaultProviders()
             self.conversations = []
@@ -299,7 +309,8 @@ final class AppEnvironment {
             agents: agents,
             defaultAgentForNewChats: defaultAgentForNewChats,
             mcpServers: mcpServers,
-            skills: skills
+            skills: skills,
+            ragRerankEnabled: ragRerankEnabled
         )
         // Encode + atomic write off MainActor. At 70k+ tokens the encode
         // alone is hundreds of ms — running it on MainActor blocked the UI
@@ -435,7 +446,18 @@ final class AppEnvironment {
             // and propagated into every tool-call subtask the runner spawns.
             // Lets two chats stream concurrently without their rag_search
             // calls clobbering each other's attached collections.
-            attachedAccessor: { ChatTaskContext.attachedCollections }
+            attachedAccessor: { ChatTaskContext.attachedCollections },
+            // Live retrieval settings read per turn: hybrid is always on; the
+            // reranker is supplied once loaded (and only when enabled). Kicks
+            // off a lazy load so the next search picks it up.
+            settingsAccessor: { [weak self] in
+                guard let self else { return RAGRetrievalSettings() }
+                if self.ragRerankEnabled { self.loadRerankerIfNeeded() }
+                return RAGRetrievalSettings(
+                    useHybrid: true,
+                    reranker: self.ragRerankEnabled ? self.ragReranker : nil
+                )
+            }
         ))
         // current_time is opt-in (not in defaultEnabledTools) so the system
         // prompt prefix stays cache-friendly for users who don't need
@@ -1009,6 +1031,23 @@ final class AppEnvironment {
                 .flatMap { $0.blobHashes }
         )
         BlobStore.shared.garbageCollect(keeping: live)
+    }
+
+    /// Whether a reranker load is in flight, to avoid kicking off duplicates.
+    private var rerankerLoading = false
+
+    /// Lazily load the on-device reranker the first time RAG search needs it
+    /// (and rerank is enabled). No-op under FCHAT_SKIP_MLX (tests/CI) or once
+    /// loaded. The actual MLX model load is performed by `MLXRerankerLoader`;
+    /// failure leaves `ragReranker` nil so retrieval degrades to hybrid-only.
+    func loadRerankerIfNeeded() {
+        guard ragReranker == nil, !rerankerLoading else { return }
+        if ProcessInfo.processInfo.environment["FCHAT_SKIP_MLX"] == "1" { return }
+        rerankerLoading = true
+        Task { @MainActor in
+            defer { self.rerankerLoading = false }
+            self.ragReranker = await MLXRerankerProvider.loadShared()
+        }
     }
 
     func deleteConversation(_ id: ConversationID) {

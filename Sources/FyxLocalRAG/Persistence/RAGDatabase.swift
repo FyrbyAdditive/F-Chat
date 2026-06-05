@@ -111,6 +111,44 @@ public final class RAGDatabase: Sendable {
             try db.create(index: "chunks_document_idx", on: "chunks", columns: ["document_id"])
         }
 
+        // FTS5 full-text index over chunk text, for hybrid keyword+vector
+        // search. External-content table keyed by the chunks' implicit integer
+        // rowid (`content_rowid='rowid'`), so the FTS index stores no duplicate
+        // text — it points back into `chunks`. Triggers keep it in sync on
+        // insert/update/delete; the final statement backfills any rows that
+        // already existed (so collections ingested before this migration gain
+        // keyword search without re-ingest). FTS5 is compiled into the system
+        // SQLite GRDB links (verified: PRAGMA compile_options → ENABLE_FTS5).
+        m.registerMigration("v2_fts") { db in
+            try db.execute(sql: """
+                CREATE VIRTUAL TABLE chunks_fts USING fts5(
+                    text,
+                    content='chunks',
+                    content_rowid='rowid',
+                    tokenize='unicode61 remove_diacritics 2'
+                )
+                """)
+            // Sync triggers (the standard FTS5 external-content pattern).
+            try db.execute(sql: """
+                CREATE TRIGGER chunks_ai AFTER INSERT ON chunks BEGIN
+                    INSERT INTO chunks_fts(rowid, text) VALUES (new.rowid, new.text);
+                END
+                """)
+            try db.execute(sql: """
+                CREATE TRIGGER chunks_ad AFTER DELETE ON chunks BEGIN
+                    INSERT INTO chunks_fts(chunks_fts, rowid, text) VALUES ('delete', old.rowid, old.text);
+                END
+                """)
+            try db.execute(sql: """
+                CREATE TRIGGER chunks_au AFTER UPDATE ON chunks BEGIN
+                    INSERT INTO chunks_fts(chunks_fts, rowid, text) VALUES ('delete', old.rowid, old.text);
+                    INSERT INTO chunks_fts(rowid, text) VALUES (new.rowid, new.text);
+                END
+                """)
+            // Backfill existing chunks.
+            try db.execute(sql: "INSERT INTO chunks_fts(chunks_fts) VALUES ('rebuild')")
+        }
+
         return m
     }
 }
