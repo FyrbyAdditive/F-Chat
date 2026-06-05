@@ -17,7 +17,11 @@ This client has the following features:
 
 * Skills, including sandboxed Python/bash script support
 * MCP via stdio/http with API key or OAuth
-* RAG, with local embedding via Qwen3-Embedding-4B
+* RAG funtionality including:
+  * Local embedding via on-device Qwen3-Embedding-0.6B 8-bit
+  * Hybrid keyword & vector search
+  * Reranking via on-device Qwen3-Reranker-0.6B 8-bit
+* Cross-chat search
 * Import from Anthropic/OpenAI exports
 * Export to multiple file formats
 
@@ -34,7 +38,7 @@ The following provider types are supported, which are included as they work with
 
 * OpenAI Responses API
 * OpenAI Completions API
-* Anthropic Messages API (via their Platform API, not a claude.ai account)
+* Anthropic Messages API (via Platform API, not a claude.ai account)
 
 Currently FyxLocal has English, Swedish and Danish localisations and is open to submissions for more.
 
