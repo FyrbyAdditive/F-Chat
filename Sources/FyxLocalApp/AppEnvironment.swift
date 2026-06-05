@@ -138,6 +138,15 @@ final class AppEnvironment {
     /// reaching into the registry.
     let oauthCoordinator: OAuthCoordinator
     var sidebarSelection: SidebarSelection?
+    /// Multi-selected conversation rows in the sidebar (native macOS Cmd/Shift
+    /// multi-select). Drives the List's selection binding. Session-only — the
+    /// single persisted anchor is `selectedConversationID`. A footer pane
+    /// (Settings/Collections) clears this so it can't show a chat highlight.
+    var selectedConversationIDs: Set<ConversationID> = []
+    /// The most-recently-added member of `selectedConversationIDs` — the chat the
+    /// detail pane shows while multiple are selected. Derived in
+    /// `reconcileSelection`; never points outside the set (except transiently).
+    var lastSelectedConversationID: ConversationID?
     /// Selected tab in the Settings window. Settable from elsewhere (e.g. the
     /// "About FyxLocal" menu command sets `.about` before opening Settings).
     /// Session-only; not persisted.
@@ -286,6 +295,8 @@ final class AppEnvironment {
         }
         if let id = self.selectedConversationID, self.conversations.contains(where: { $0.id == id }) {
             self.sidebarSelection = .conversation(id)
+            self.selectedConversationIDs = [id]
+            self.lastSelectedConversationID = id
         } else {
             self.sidebarSelection = nil
         }
@@ -889,6 +900,10 @@ final class AppEnvironment {
         conversations.insert(conversation, at: 0)
         selectedConversationID = conversation.id
         sidebarSelection = .conversation(conversation.id)
+        // Keep the multi-select state in sync so the new chat is the sole
+        // selection + anchor (single and multi paths must never desync).
+        selectedConversationIDs = [conversation.id]
+        lastSelectedConversationID = conversation.id
         // Kick off model detection so the chat can be used immediately.
         if detectedModels[provider.id] == nil {
             Task { await refreshModels(for: provider) }
@@ -963,6 +978,8 @@ final class AppEnvironment {
         if let first = created.first {
             selectedConversationID = first.id
             sidebarSelection = .conversation(first.id)
+            selectedConversationIDs = [first.id]
+            lastSelectedConversationID = first.id
         }
         return ChatImportSummary(
             format: preview.format,
@@ -1085,39 +1102,110 @@ final class AppEnvironment {
     }
 
     func deleteConversation(_ id: ConversationID) {
-        // Cancel any in-flight stream for this chat and free its cached
-        // view model before dropping the underlying conversation.
-        chatViewModels[id]?.cancel()
-        chatViewModels.removeValue(forKey: id)
-        // The detail pane renders whatever `sidebarSelection` points at (the
-        // List's selection binding drives that, NOT `selectedConversationID`),
-        // so we must move selection off this chat when it's the one on screen —
-        // otherwise the detail keeps rendering a now-deleted id and shows a
-        // stray spinner. Check both fields so it works however selection was set.
-        let wasShowing = sidebarSelection == .conversation(id) || selectedConversationID == id
-        // Clear selection BEFORE removing the row when deleting the selected one.
-        // The sidebar is List(selection: $sidebarSelection) — a two-way binding —
-        // so mutating `conversations` AND re-pointing `sidebarSelection` to a new
-        // row in the SAME @Observable update coalesces into one diff where the
-        // selection re-anchors and the removal of the selected row silently fails
-        // to commit. That's why deleting the selected (top) chat did nothing while
-        // non-selected (bottom) rows deleted fine. Nil-ing selection first removes
-        // the competing write so the removal commits cleanly.
+        deleteConversations([id])
+    }
+
+    /// Delete one or more conversations, re-anchoring selection safely. This
+    /// generalizes the documented race-avoidance pattern: the sidebar List binds
+    /// `selectedConversationIDs` (a two-way binding), so mutating `conversations`
+    /// AND re-pointing the selection in the SAME @Observable update coalesces
+    /// into one diff where the row removals silently fail to commit. So we clear
+    /// the selection FIRST, remove the rows, then re-anchor to a surviving
+    /// neighbour in a SEPARATE MainActor task once the List has settled.
+    func deleteConversations(_ ids: Set<ConversationID>) {
+        guard !ids.isEmpty else { return }
+        // Cancel in-flight streams + free cached view models for each.
+        for id in ids {
+            chatViewModels[id]?.cancel()
+            chatViewModels.removeValue(forKey: id)
+        }
+        let wasShowing = ids.contains { sidebarSelection == .conversation($0) || selectedConversationID == $0 }
+        // Capture the re-anchor target BEFORE removal: the nearest survivor to
+        // the deleted block in sidebar order.
+        let survivor = Self.reanchorTarget(deleting: ids, from: conversations)
+
+        // Clear the competing selection writes first (the diff-race fix), always
+        // including the Set binding.
+        selectedConversationIDs = []
         if wasShowing {
             selectedConversationID = nil
             sidebarSelection = nil
+            lastSelectedConversationID = nil
         }
-        conversations.removeAll { $0.id == id }
-        // Re-select the nearest remaining chat as a SEPARATE update (next tick)
-        // so the List has settled the deletion before it re-anchors selection.
-        if wasShowing, let next = conversations.first {
-            let nextID = next.id
-            Task { @MainActor in
-                guard self.conversations.contains(where: { $0.id == nextID }) else { return }
-                self.selectedConversationID = nextID
-                self.sidebarSelection = .conversation(nextID)
+        conversations.removeAll { ids.contains($0.id) }
+
+        // Re-anchor on the next tick so the List has applied the removals first.
+        let reAnchor = wasShowing ? survivor : nil
+        Task { @MainActor in
+            if let reAnchor, self.conversations.contains(where: { $0.id == reAnchor }) {
+                self.selectedConversationID = reAnchor
+                self.sidebarSelection = .conversation(reAnchor)
+                self.selectedConversationIDs = [reAnchor]
+                self.lastSelectedConversationID = reAnchor
             }
+            // Reclaim image/attachment blobs the deleted chats may have held.
+            self.gcBlobs()
         }
+    }
+
+    /// The conversation to select after deleting `ids` from `list`: the first
+    /// surviving conversation at or after the first deleted row's position, else
+    /// the last survivor before it, else nil (everything deleted). Pure +
+    /// static so it's unit-testable without a live AppEnvironment.
+    static func reanchorTarget(deleting ids: Set<ConversationID>, from list: [Conversation]) -> ConversationID? {
+        guard let firstDeletedIdx = list.firstIndex(where: { ids.contains($0.id) }) else { return nil }
+        // Prefer the survivor that will occupy the deleted block's position.
+        if let after = list[firstDeletedIdx...].first(where: { !ids.contains($0.id) }) {
+            return after.id
+        }
+        // Otherwise the closest survivor above the block.
+        if let before = list[..<firstDeletedIdx].last(where: { !ids.contains($0.id) }) {
+            return before.id
+        }
+        return nil
+    }
+
+    /// React to a change in the sidebar's multi-selection Set: pick the recency
+    /// anchor (the chat the detail pane shows) and mirror it into the single
+    /// `sidebarSelection` / persisted `selectedConversationID`. MUST NOT write
+    /// back into `selectedConversationIDs` (that would re-fire the observer).
+    func reconcileSelection(old: Set<ConversationID>, new: Set<ConversationID>) {
+        // Empty selection: if a chat was showing, drop to the placeholder; if a
+        // footer pane is active (the footer just cleared the set), leave it.
+        guard let anchor = Self.recencyAnchor(old: old, new: new, order: conversations, previous: lastSelectedConversationID) else {
+            if case .conversation = sidebarSelection {
+                sidebarSelection = nil
+                selectedConversationID = nil
+            }
+            lastSelectedConversationID = nil
+            return
+        }
+        lastSelectedConversationID = anchor
+        selectedConversationID = anchor
+        sidebarSelection = .conversation(anchor)
+    }
+
+    /// Choose which selected chat the detail pane should show after a selection
+    /// change. Newly-inserted ids win (the chat the user just clicked); for a
+    /// range/multi add, the topmost inserted in `order` (least surprising). When
+    /// nothing was added, keep `previous` if it survived, else the topmost
+    /// remaining. nil when the selection is empty. Pure + static for testing.
+    static func recencyAnchor(
+        old: Set<ConversationID>,
+        new: Set<ConversationID>,
+        order: [Conversation],
+        previous: ConversationID?
+    ) -> ConversationID? {
+        guard !new.isEmpty else { return nil }
+        let inserted = new.subtracting(old)
+        if !inserted.isEmpty {
+            // Topmost inserted in sidebar order.
+            return order.first { inserted.contains($0.id) }?.id ?? inserted.first
+        }
+        // Selection shrank (or unchanged): keep the previous anchor if it's still
+        // selected, else the topmost remaining member.
+        if let previous, new.contains(previous) { return previous }
+        return order.first { new.contains($0.id) }?.id ?? new.first
     }
 
     func deleteAllConversations() {
@@ -1126,6 +1214,8 @@ final class AppEnvironment {
         conversations.removeAll()
         selectedConversationID = nil
         sidebarSelection = nil
+        selectedConversationIDs = []
+        lastSelectedConversationID = nil
     }
 
     private func slug(from text: String) -> String {

@@ -23,15 +23,21 @@ struct ExportChatsSheet: View {
     @State private var search: String = ""
     @State private var format: ChatExportFormat = .markdown
 
-    init(environment: AppEnvironment, preview: ChatExportPreview, isPresented: Binding<Bool>,
+    init(environment: AppEnvironment, preview: ChatExportPreview, preselectedIDs: Set<ConversationID>? = nil,
+         isPresented: Binding<Bool>,
          onExport: @escaping (ChatExportBundle) -> Void, onError: @escaping (String) -> Void) {
         self.environment = environment
         self.preview = preview
         self._isPresented = isPresented
         self.onExport = onExport
         self.onError = onError
-        // Default: everything selected.
-        _selected = State(initialValue: Set(preview.items.map(\.index)))
+        // Pre-fill from the sidebar's multi-selection when provided (batch
+        // export), else default to everything selected (toolbar / menu export).
+        if let preselectedIDs {
+            _selected = State(initialValue: Set(preview.items.filter { preselectedIDs.contains($0.id) }.map(\.index)))
+        } else {
+            _selected = State(initialValue: Set(preview.items.map(\.index)))
+        }
     }
 
     private var filtered: [ChatExportPreview.Item] {

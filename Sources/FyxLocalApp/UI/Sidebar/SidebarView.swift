@@ -29,6 +29,11 @@ struct SidebarView: View {
     @State private var showExportSavePanel = false
     @State private var exportError: String?
     @State private var searchText: String = ""
+    /// Batch (multi-select) delete: the set awaiting count-based confirmation.
+    @State private var pendingBatchDeletion: Set<ConversationID>?
+    /// Conversations to pre-select in the export wizard when opened from the
+    /// batch "Export N chats…" action (nil → wizard defaults to all selected).
+    @State private var exportPreselection: Set<ConversationID>?
 
     /// Conversations after applying the sidebar search (title + message text).
     /// Empty query returns everything, preserving the user's order.
@@ -44,7 +49,7 @@ struct SidebarView: View {
         // The conversations list scrolls on its own; Collections + Settings are
         // pinned to the bottom via a safe-area inset so they never scroll out
         // of view no matter how many chats there are.
-        List(selection: $environment.sidebarSelection) {
+        List(selection: $environment.selectedConversationIDs) {
             Section {
                 if isSearching && visibleConversations.isEmpty {
                     Text("No matches")
@@ -57,9 +62,11 @@ struct SidebarView: View {
                     // Drag-to-reorder. Mutating environment.conversations
                     // in place takes the new order through the existing
                     // scheduleSave debounce; no schema change required.
-                    // Suppressed while searching: offsets from a filtered
-                    // subset don't map back to the full array correctly.
-                    .onMove(perform: isSearching ? nil : { indices, newOffset in
+                    // Suppressed while searching (offsets from a filtered
+                    // subset don't map back to the full array) and while a
+                    // multi-selection is active (dragging a multi-selection is
+                    // ambiguous; keep single-row reorder, the common case).
+                    .onMove(perform: (isSearching || environment.selectedConversationIDs.count > 1) ? nil : { indices, newOffset in
                         environment.conversations.move(fromOffsets: indices, toOffset: newOffset)
                     })
                 }
@@ -83,12 +90,18 @@ struct SidebarView: View {
         .safeAreaInset(edge: .bottom, spacing: 0) {
             sidebarFooter
         }
-        // Return on a selected row enters rename mode, mirroring Finder.
-        // Returns .ignored if no row is selected or one is already being
-        // renamed (so the inline TextField's own submit still works).
+        // Selection drives the detail pane: pick the most-recently-selected chat
+        // (the recency anchor) and mirror it into sidebarSelection.
+        .onChange(of: environment.selectedConversationIDs) { old, new in
+            environment.reconcileSelection(old: old, new: new)
+        }
+        // Return on a single selected row enters rename mode, mirroring Finder.
+        // Only when exactly one chat is selected (rename has no unambiguous
+        // target otherwise). .ignored if none/multiple selected or already renaming.
         .onKeyPress(.return) {
             guard renamingID == nil,
-                  case .conversation(let id) = environment.sidebarSelection,
+                  environment.selectedConversationIDs.count == 1,
+                  let id = environment.selectedConversationIDs.first,
                   let conversation = environment.conversations.first(where: { $0.id == id })
             else { return .ignored }
             beginRename(conversation)
@@ -132,100 +145,48 @@ struct SidebarView: View {
         .onChange(of: environment.importChatsRequests) { _, _ in
             showChatImporter = true
         }
-        .fileImporter(
-            isPresented: $showChatImporter,
-            allowedContentTypes: [.json, .zip],
-            allowsMultipleSelection: false
-        ) { result in
-            handleChatImport(result)
-        }
-        .sheet(isPresented: Binding(
-            get: { importPreview != nil },
-            set: { if !$0 { importPreview = nil } }
-        )) {
-            if let preview = importPreview {
-                ImportChatsSheet(
-                    environment: environment,
-                    preview: preview,
-                    isPresented: Binding(
-                        get: { importPreview != nil },
-                        set: { if !$0 { importPreview = nil } }
-                    ),
-                    onCommit: { importResult = $0 }
-                )
-            }
-        }
-        .alert("Import chats", isPresented: importAlertPresented) {
-            Button("OK", role: .cancel) { importResult = nil; importError = nil }
-        } message: {
-            if let importError {
-                Text(importError)
-            } else if let importResult {
-                Text(importSummaryMessage(importResult))
-            }
-        }
-        // Export — toolbar button and File ▸ Export Chats… both open the wizard;
-        // the row context menu requests a single-chat export (no wizard).
-        .onChange(of: environment.exportChatsRequests) { _, _ in
-            exportPreview = environment.exportPreview()
-        }
-        .sheet(isPresented: Binding(
-            get: { exportPreview != nil },
-            set: { if !$0 { exportPreview = nil } }
-        )) {
-            if let preview = exportPreview {
-                ExportChatsSheet(
-                    environment: environment,
-                    preview: preview,
-                    isPresented: Binding(
-                        get: { exportPreview != nil },
-                        set: { if !$0 { exportPreview = nil } }
-                    ),
-                    onExport: { bundle in
-                        pendingExportBundle = bundle
-                        showExportSavePanel = true
-                    },
-                    onError: { exportError = $0 }
-                )
-            }
-        }
-        // Save via NSSavePanel rather than .fileExporter: the format is already
-        // chosen (in the wizard or the context-menu submenu), so the panel must
-        // NOT offer a different list of file types. NSSavePanel with a single
-        // allowedContentType shows exactly the chosen format and nothing else.
-        .onChange(of: showExportSavePanel) { _, present in
-            guard present, let bundle = pendingExportBundle else { return }
-            showExportSavePanel = false
-            presentSavePanel(for: bundle)
-        }
-        .alert("Export chats", isPresented: Binding(
-            get: { exportError != nil },
-            set: { if !$0 { exportError = nil } }
-        )) {
-            Button("OK", role: .cancel) { exportError = nil }
-        } message: {
-            if let exportError { Text(exportError) }
-        }
-        .confirmationDialog(
-            confirmationTitle,
-            isPresented: Binding(
-                get: { pendingDeletion != nil },
-                set: { if !$0 { pendingDeletion = nil } }
-            ),
-            titleVisibility: .visible
-        ) {
-            Button("Delete", role: .destructive) {
-                if let id = pendingDeletion {
-                    environment.deleteConversation(id)
-                }
-                pendingDeletion = nil
-            }
-            Button("Cancel", role: .cancel) {
-                pendingDeletion = nil
-            }
-        } message: {
-            Text("This conversation will be removed permanently. This cannot be undone.")
-        }
+        // The import/export/delete sheets, alerts, and dialogs are split into a
+        // helper modifier — keeping them inline made `body` too large for the
+        // Swift type-checker to resolve in reasonable time.
+        .modifier(importExportModifiers)
+        .modifier(deleteDialogModifiers)
+    }
+
+    /// File import picker + import wizard sheet + import alert + export wizard
+    /// sheet + export save-panel hook + export error alert.
+    private var importExportModifiers: some ViewModifier {
+        ImportExportModifiers(
+            environment: environment,
+            showChatImporter: $showChatImporter,
+            importPreview: $importPreview,
+            importResult: $importResult,
+            importError: $importError,
+            exportPreview: $exportPreview,
+            exportPreselection: $exportPreselection,
+            pendingExportBundle: $pendingExportBundle,
+            showExportSavePanel: $showExportSavePanel,
+            exportError: $exportError,
+            handleChatImport: { handleChatImport($0) },
+            importAlertPresented: importAlertPresented,
+            importSummaryMessage: { importSummaryMessage($0) },
+            presentSavePanel: { presentSavePanel(for: $0) }
+        )
+    }
+
+    /// Single + batch delete confirmation dialogs.
+    private var deleteDialogModifiers: some ViewModifier {
+        DeleteDialogModifiers(
+            environment: environment,
+            pendingDeletion: $pendingDeletion,
+            pendingBatchDeletion: $pendingBatchDeletion,
+            confirmationTitle: confirmationTitle,
+            batchDeletionTitle: batchDeletionTitle
+        )
+    }
+
+    private var batchDeletionTitle: String {
+        let n = pendingBatchDeletion?.count ?? 0
+        return String(localized: "Delete \(n) conversations?")
     }
 
     /// Collections + Settings, pinned at the bottom of the sidebar. A small
@@ -261,6 +222,12 @@ struct SidebarView: View {
         let isSelected = environment.sidebarSelection == selection
         Button {
             environment.sidebarSelection = selection
+            // Clear any chat multi-selection so the footer pane and a chat
+            // highlight are mutually exclusive (the List no longer shares this
+            // binding). Guarded to avoid a redundant onChange when already empty.
+            if !environment.selectedConversationIDs.isEmpty {
+                environment.selectedConversationIDs = []
+            }
         } label: {
             // Custom label (not `Label`) so the icon sits in a fixed-width
             // column: `books.vertical` and `gearshape` have different intrinsic
@@ -286,44 +253,46 @@ struct SidebarView: View {
 
     @ViewBuilder
     private func conversationRow(_ conversation: Conversation) -> some View {
-        NavigationLink(value: SidebarSelection.conversation(conversation.id)) {
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    if renamingID == conversation.id {
-                        TextField("Chat name", text: $renameDraft)
-                            .textFieldStyle(.plain)
-                            .font(.body)
-                            .focused($renameFieldFocus, equals: conversation.id)
-                            .onSubmit { commitRename() }
-                            .onExitCommand { cancelRename() }
-                            .onChange(of: renameFieldFocus) { _, newFocus in
-                                // Focus moved away from this field — commit
-                                // whatever was typed. Guard against the
-                                // commit-then-clear feedback loop.
-                                if newFocus != conversation.id && renamingID == conversation.id {
-                                    commitRename()
-                                }
+        // Content rendered directly (no NavigationLink): the List binds a
+        // Set<ConversationID> for multi-select, so the row identifies itself via
+        // `.tag(conversation.id)`. The tag type MUST match the Set element type.
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 6) {
+                if renamingID == conversation.id {
+                    TextField("Chat name", text: $renameDraft)
+                        .textFieldStyle(.plain)
+                        .font(.body)
+                        .focused($renameFieldFocus, equals: conversation.id)
+                        .onSubmit { commitRename() }
+                        .onExitCommand { cancelRename() }
+                        .onChange(of: renameFieldFocus) { _, newFocus in
+                            // Focus moved away from this field — commit
+                            // whatever was typed. Guard against the
+                            // commit-then-clear feedback loop.
+                            if newFocus != conversation.id && renamingID == conversation.id {
+                                commitRename()
                             }
-                    } else {
-                        Text(conversation.title)
-                            .lineLimit(1)
-                            .font(.body)
-                    }
-                    Spacer(minLength: 0)
-                    // Tiny indicator when a background stream is still
-                    // running for this chat. Only chats the user has
-                    // visited this session have a cached view model;
-                    // never-visited chats never have an in-flight stream.
-                    if environment.chatViewModels[conversation.id]?.isStreaming == true {
-                        ProgressView()
-                            .controlSize(.mini)
-                    }
+                        }
+                } else {
+                    Text(conversation.title)
+                        .lineLimit(1)
+                        .font(.body)
                 }
-                Text(conversation.updatedAt.formatted(date: .abbreviated, time: .shortened))
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+                Spacer(minLength: 0)
+                // Tiny indicator when a background stream is still
+                // running for this chat. Only chats the user has
+                // visited this session have a cached view model;
+                // never-visited chats never have an in-flight stream.
+                if environment.chatViewModels[conversation.id]?.isStreaming == true {
+                    ProgressView()
+                        .controlSize(.mini)
+                }
             }
+            Text(conversation.updatedAt.formatted(date: .abbreviated, time: .shortened))
+                .font(.caption2)
+                .foregroundStyle(.secondary)
         }
+        .tag(conversation.id)
         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
             Button(role: .destructive) {
                 pendingDeletion = conversation.id
@@ -332,9 +301,37 @@ struct SidebarView: View {
             }
         }
         .contextMenu {
+            conversationContextMenu(conversation)
+        }
+    }
+
+    /// Adaptive right-click menu. When the clicked row is part of a multi-
+    /// selection, show ONLY the batch actions (Export N… / Delete N…) acting on
+    /// the whole set. Otherwise show the normal single-row menu acting on this
+    /// row — matching native macOS behaviour where right-clicking a row outside
+    /// the selection targets that row. We never mutate the selection on
+    /// right-click (racy + the menu has already captured the row).
+    @ViewBuilder
+    private func conversationContextMenu(_ conversation: Conversation) -> some View {
+        let selected = environment.selectedConversationIDs
+        if selected.contains(conversation.id) && selected.count > 1 {
+            // Batch export opens the wizard pre-filled to the selection (format
+            // + fine-tuning happen there), so it's a single action, not a
+            // format submenu.
             Button {
-                environment.sidebarSelection = .conversation(conversation.id)
-                environment.selectedConversationID = conversation.id
+                handleBatchExport(selected)
+            } label: {
+                Label("Export \(selected.count) chats\u{2026}", systemImage: "square.and.arrow.up")
+            }
+            Divider()
+            Button(role: .destructive) {
+                pendingBatchDeletion = selected
+            } label: {
+                Label("Delete \(selected.count) chats", systemImage: "trash")
+            }
+        } else {
+            Button {
+                environment.selectedConversationIDs = [conversation.id]
             } label: {
                 Label("Open", systemImage: "arrow.up.right.square")
             }
@@ -394,6 +391,13 @@ struct SidebarView: View {
         } catch {
             exportError = (error as? CustomStringConvertible)?.description ?? error.localizedDescription
         }
+    }
+
+    /// Batch export from the multi-select menu: open the export wizard pre-filled
+    /// to the selected chats (the user picks format / fine-tunes the set there).
+    private func handleBatchExport(_ ids: Set<ConversationID>) {
+        exportPreselection = ids
+        exportPreview = environment.exportPreview()
     }
 
     /// Write an already-built bundle via an NSSavePanel locked to the bundle's
@@ -466,6 +470,147 @@ struct SidebarView: View {
             return "Delete conversation?"
         }
         return "Delete \"\(convo.title)\"?"
+    }
+}
+
+/// Import picker + import/export wizards + their alerts + the export save-panel
+/// hook. Split out of `SidebarView.body` to keep that expression type-checkable.
+private struct ImportExportModifiers: ViewModifier {
+    @Bindable var environment: AppEnvironment
+    @Binding var showChatImporter: Bool
+    @Binding var importPreview: ChatImportPreview?
+    @Binding var importResult: ChatImportSummary?
+    @Binding var importError: String?
+    @Binding var exportPreview: ChatExportPreview?
+    @Binding var exportPreselection: Set<ConversationID>?
+    @Binding var pendingExportBundle: ChatExportBundle?
+    @Binding var showExportSavePanel: Bool
+    @Binding var exportError: String?
+    let handleChatImport: (Result<[URL], Error>) -> Void
+    let importAlertPresented: Binding<Bool>
+    let importSummaryMessage: (ChatImportSummary) -> String
+    let presentSavePanel: (ChatExportBundle) -> Void
+
+    func body(content: Content) -> some View {
+        content
+            .fileImporter(
+                isPresented: $showChatImporter,
+                allowedContentTypes: [.json, .zip],
+                allowsMultipleSelection: false
+            ) { result in
+                handleChatImport(result)
+            }
+            .sheet(isPresented: Binding(
+                get: { importPreview != nil },
+                set: { if !$0 { importPreview = nil } }
+            )) {
+                if let preview = importPreview {
+                    ImportChatsSheet(
+                        environment: environment,
+                        preview: preview,
+                        isPresented: Binding(
+                            get: { importPreview != nil },
+                            set: { if !$0 { importPreview = nil } }
+                        ),
+                        onCommit: { importResult = $0 }
+                    )
+                }
+            }
+            .alert("Import chats", isPresented: importAlertPresented) {
+                Button("OK", role: .cancel) { importResult = nil; importError = nil }
+            } message: {
+                if let importError {
+                    Text(importError)
+                } else if let importResult {
+                    Text(importSummaryMessage(importResult))
+                }
+            }
+            // Export — toolbar button and File ▸ Export Chats… both open the
+            // wizard; the row context menu requests a single-chat export.
+            .onChange(of: environment.exportChatsRequests) { _, _ in
+                exportPreview = environment.exportPreview()
+            }
+            .sheet(isPresented: Binding(
+                get: { exportPreview != nil },
+                set: { if !$0 { exportPreview = nil; exportPreselection = nil } }
+            )) {
+                if let preview = exportPreview {
+                    ExportChatsSheet(
+                        environment: environment,
+                        preview: preview,
+                        preselectedIDs: exportPreselection,
+                        isPresented: Binding(
+                            get: { exportPreview != nil },
+                            set: { if !$0 { exportPreview = nil; exportPreselection = nil } }
+                        ),
+                        onExport: { bundle in
+                            pendingExportBundle = bundle
+                            showExportSavePanel = true
+                        },
+                        onError: { exportError = $0 }
+                    )
+                }
+            }
+            // Save via NSSavePanel (format is already chosen upstream).
+            .onChange(of: showExportSavePanel) { _, present in
+                guard present, let bundle = pendingExportBundle else { return }
+                showExportSavePanel = false
+                presentSavePanel(bundle)
+            }
+            .alert("Export chats", isPresented: Binding(
+                get: { exportError != nil },
+                set: { if !$0 { exportError = nil } }
+            )) {
+                Button("OK", role: .cancel) { exportError = nil }
+            } message: {
+                if let exportError { Text(exportError) }
+            }
+    }
+}
+
+/// Single + batch delete confirmation dialogs. Split out for the same
+/// type-check-time reason as `ImportExportModifiers`.
+private struct DeleteDialogModifiers: ViewModifier {
+    @Bindable var environment: AppEnvironment
+    @Binding var pendingDeletion: ConversationID?
+    @Binding var pendingBatchDeletion: Set<ConversationID>?
+    let confirmationTitle: String
+    let batchDeletionTitle: String
+
+    func body(content: Content) -> some View {
+        content
+            .confirmationDialog(
+                confirmationTitle,
+                isPresented: Binding(
+                    get: { pendingDeletion != nil },
+                    set: { if !$0 { pendingDeletion = nil } }
+                ),
+                titleVisibility: .visible
+            ) {
+                Button("Delete", role: .destructive) {
+                    if let id = pendingDeletion { environment.deleteConversation(id) }
+                    pendingDeletion = nil
+                }
+                Button("Cancel", role: .cancel) { pendingDeletion = nil }
+            } message: {
+                Text("This conversation will be removed permanently. This cannot be undone.")
+            }
+            .confirmationDialog(
+                batchDeletionTitle,
+                isPresented: Binding(
+                    get: { pendingBatchDeletion != nil },
+                    set: { if !$0 { pendingBatchDeletion = nil } }
+                ),
+                titleVisibility: .visible
+            ) {
+                Button("Delete", role: .destructive) {
+                    if let ids = pendingBatchDeletion { environment.deleteConversations(ids) }
+                    pendingBatchDeletion = nil
+                }
+                Button("Cancel", role: .cancel) { pendingBatchDeletion = nil }
+            } message: {
+                Text("These conversations will be removed permanently. This cannot be undone.")
+            }
     }
 }
 
