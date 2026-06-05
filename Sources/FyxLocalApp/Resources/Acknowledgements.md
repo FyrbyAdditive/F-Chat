@@ -18,10 +18,12 @@ SWIFT PACKAGES
 • swift-markdown — Apache-2.0 — © 2021 Apple Inc. and the Swift project authors
 • swift-huggingface, swift-jinja, swift-transformers — Apache-2.0 — © Hugging Face
 
-BUNDLED EMBEDDING MODEL
+BUNDLED MLX MODELS
 
-• Qwen3-Embedding-4B (4-bit DWQ, MLX) — Apache-2.0 — base model © Alibaba / the Qwen
-  team (Qwen/Qwen3-Embedding-4B); MLX conversion mlx-community/Qwen3-Embedding-4B-4bit-DWQ.
+• Qwen3-Embedding-0.6B (8-bit, MLX) — Apache-2.0 — base model © Alibaba / the Qwen
+  team (Qwen/Qwen3-Embedding-0.6B); MLX conversion majentik/Qwen3-Embedding-0.6B-MLX-8bit.
+• Qwen3-Reranker-0.6B (mxfp8, MLX) — Apache-2.0 — base model © Alibaba / the Qwen
+  team (Qwen/Qwen3-Reranker-0.6B); MLX conversion mlx-community/Qwen3-Reranker-0.6B-mxfp8.
 
 BUNDLED PYTHON RUNTIME
 

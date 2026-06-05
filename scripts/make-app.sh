@@ -21,11 +21,9 @@ APP_DIR="$ROOT/build/FyxLocal.app"
 # it, so a from-clean build (no build/ yet) doesn't fail on the redirect.
 mkdir -p "$DERIVED"
 
-# The Qwen3 weights are stored split (GitHub LFS caps at 2 GiB/file).
-# Reassemble into a single safetensors before the build so the resource
-# bundle includes the complete file.
-echo "==> assemble-qwen3-model.sh"
-"$ROOT/scripts/assemble-qwen3-model.sh"
+# The bundled MLX models (Qwen3-Embedding-0.6B + Qwen3-Reranker-0.6B) live
+# directly in Sources/FyxLocalRAG/Resources via git-LFS — each safetensors is
+# under GitHub's 2 GiB/file cap, so no reassembly step is needed.
 
 echo "==> fetch-python.sh (vendored CPython for skill code execution)"
 "$ROOT/scripts/fetch-python.sh"

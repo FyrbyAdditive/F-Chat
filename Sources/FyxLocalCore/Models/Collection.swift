@@ -38,8 +38,10 @@ public struct RAGCollection: Identifiable, Sendable, Hashable, Codable {
 }
 
 public enum EmbedderKind: String, Sendable, Hashable, Codable, CaseIterable {
-    /// On-device embeddings via MLX running Qwen3-Embedding-4B on the
-    /// Apple Silicon GPU. 2560-dim vectors, ~5ms per chunk on M-series.
+    /// On-device embeddings via MLX running the bundled Qwen3 embedder on the
+    /// Apple Silicon GPU (currently Qwen3-Embedding-0.6B, 1024-dim). The raw
+    /// value is kept as `mlxQwen3Embedding4B` for back-compat with collections
+    /// persisted before the 0.6B swap — those are re-embedded on upgrade.
     case mlxQwen3Embedding4B
     /// Remote embeddings from an OpenAI-compatible /embeddings endpoint.
     case openAICompatible

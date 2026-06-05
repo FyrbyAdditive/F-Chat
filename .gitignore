@@ -10,12 +10,6 @@ DerivedData/
 # App bundle assembled by scripts/make-app.sh
 build/
 
-# Qwen3 model weights are stored split across vendor/qwen3-safetensors/
-# (each piece <2 GiB, the GitHub LFS per-file ceiling) and reassembled
-# into the FyxLocalRAG resource bundle at build time by make-app.sh.
-# The reassembled blob is treated as a build artefact, not source.
-Sources/FyxLocalRAG/Resources/Qwen3-Embedding-4B-4bit-DWQ/model.safetensors
-
 # Xcode user data
 xcuserdata/
 *.xcuserstate

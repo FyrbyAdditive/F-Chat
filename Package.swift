@@ -18,11 +18,11 @@ let package = Package(
         .package(url: "https://github.com/scinfu/SwiftSoup.git", from: "2.7.0"),
         .package(url: "https://github.com/swiftlang/swift-markdown.git", from: "0.4.0"),
         .package(url: "https://github.com/groue/GRDB.swift.git", from: "6.29.0"),
-        // On-device embeddings (Qwen3-Embedding-4B on Apple Silicon via MLX).
-        // Model weights are vendored into the app bundle under
-        // Sources/FyxLocalRAG/Resources/Qwen3-Embedding-4B-4bit-DWQ — no
-        // Hugging Face download at runtime. We still need swift-transformers
-        // for the tokenizer loader macros (#huggingFaceTokenizerLoader).
+        // On-device embeddings + reranking (Qwen3 0.6B models on Apple Silicon
+        // via MLX). Model weights are vendored into the app bundle under
+        // Sources/FyxLocalRAG/Resources/ — no Hugging Face download at runtime.
+        // We still need swift-transformers for the tokenizer loader macros
+        // (#huggingFaceTokenizerLoader).
         .package(url: "https://github.com/ml-explore/mlx-swift-lm", from: "3.31.3"),
         .package(url: "https://github.com/huggingface/swift-transformers", from: "1.3.0"),
         .package(url: "https://github.com/weichsel/ZIPFoundation", from: "0.9.0"),
@@ -112,8 +112,6 @@ let package = Package(
             // Qwen3-Reranker-0.6B-mxfp8 reranker (~614 MB) so the app is
             // self-contained — no first-run Hugging Face download. Tracked via
             // git-lfs so checkouts pull binaries from LFS, not the main history.
-            // (The older 2.26 GB Qwen3-Embedding-4B-4bit-DWQ dir is kept in the
-            // repo for now but no longer bundled.)
             resources: [
                 .copy("Resources/Qwen3-Embedding-0.6B-MLX-8bit"),
                 .copy("Resources/Qwen3-Reranker-0.6B-mxfp8"),
