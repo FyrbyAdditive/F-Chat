@@ -244,6 +244,11 @@ struct ReasoningBlock: View {
                 .font(.callout)
                 .italic()
                 .foregroundStyle(.secondary)
+                .multilineTextAlignment(.leading)
+                // Pin to the leading edge + full width. Without this the Text
+                // sizes to its content and centres in the box, so streaming
+                // reasoning starts mid-box and visibly shifts left as it fills.
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.top, 4)
         } label: {
             Label("Thinking", systemImage: "brain")
