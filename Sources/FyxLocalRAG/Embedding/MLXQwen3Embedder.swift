@@ -22,8 +22,6 @@ import FyxLocalCore
 public struct MLXQwen3Embedder: Embedder {
     public static let modelID = "majentik/Qwen3-Embedding-0.6B-MLX-8bit"
     public static let embeddingDim = 1024
-    public static let queryInstruction =
-        "Instruct: Given a query, retrieve relevant passages that answer the query\nQuery: "
 
     public let kind: EmbedderKind = .mlxQwen3Embedding4B
     public let modelID: String = MLXQwen3Embedder.modelID
@@ -65,14 +63,6 @@ public struct MLXQwen3Embedder: Embedder {
         // docs flag this exact case (see Memory.swift comments).
         MLX.Memory.clearCache()
         return vectors
-    }
-
-    /// Apply the Qwen3-recommended retrieval instruction prefix on the
-    /// query side only. Chunks (ingest) get no prefix.
-    public func embedQuery(_ query: String) async throws -> [Float] {
-        let prefixed = Self.queryInstruction + query
-        let vectors = try await embed([prefixed])
-        return vectors[0]
     }
 }
 

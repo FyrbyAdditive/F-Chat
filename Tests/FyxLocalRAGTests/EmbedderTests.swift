@@ -4,7 +4,6 @@
 import Testing
 import Foundation
 import FyxLocalCore
-import FyxLocalProviders
 @testable import FyxLocalRAG
 
 @Suite("Embedders")
@@ -30,27 +29,4 @@ struct EmbedderTests {
         }
     }
 
-    @Test func remoteEmbedderProxiesProvider() async throws {
-        let provider = MockLLMProvider(embeddings: [
-            [0.1, 0.2, 0.3, 0.4],
-            [1.0, 0.0, 0.0, 0.0],
-        ])
-        let remote = RemoteEmbedder(provider: provider, modelID: "text-embedding-3-small", dim: 4)
-        let result = try await remote.embed(["a", "b"])
-        #expect(result.count == 2)
-        #expect(result[0] == [0.1, 0.2, 0.3, 0.4])
-    }
-
-    @Test func remoteEmbedderDimMismatchThrows() async {
-        let provider = MockLLMProvider(embeddings: [[1, 2, 3]])
-        let remote = RemoteEmbedder(provider: provider, modelID: "m", dim: 4)
-        do {
-            _ = try await remote.embed(["x"])
-            Issue.record("expected throw")
-        } catch EmbedderError.dimensionMismatch(let exp, let got) {
-            #expect(exp == 4 && got == 3)
-        } catch {
-            Issue.record("unexpected: \(error)")
-        }
-    }
 }

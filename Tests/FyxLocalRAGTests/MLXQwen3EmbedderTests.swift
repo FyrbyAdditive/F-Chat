@@ -83,18 +83,6 @@ struct MLXQwen3EmbedderTests {
                 "expected cat/feline > cat/monetary; got related=\(related), unrelated=\(unrelated)")
     }
 
-    @Test func queryEmbedAppliesInstructionPrefix() async throws {
-        let container = try await MLXEmbedderLoader.shared.shared()
-        let embedder = MLXQwen3Embedder(container: container)
-        let raw = try await embedder.embed(["apple"])[0]
-        let asQuery = try await embedder.embedQuery("apple")
-        // Different inputs → different vectors. Cosine is high (same word)
-        // but they're not identical.
-        let c = cosine(raw, asQuery)
-        #expect(c > 0.7, "query template should still yield a related vector; cosine=\(c)")
-        #expect(c < 0.999, "query template should produce a measurably different vector; cosine=\(c)")
-    }
-
     @Test func batchEmbedsMultipleTextsInOneCall() async throws {
         let container = try await MLXEmbedderLoader.shared.shared()
         let embedder = MLXQwen3Embedder(container: container)

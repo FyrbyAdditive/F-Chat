@@ -3,7 +3,6 @@
 
 import Foundation
 import FyxLocalCore
-import FyxLocalProviders
 
 public protocol Embedder: Sendable {
     var dim: Int { get }
@@ -16,32 +15,6 @@ public enum EmbedderError: Error, Sendable, Equatable {
     case emptyInput
     case dimensionMismatch(expected: Int, got: Int)
     case unavailable(String)
-}
-
-/// Calls an `LLMProvider.embed`-compatible endpoint. Useful for OpenAI-style
-/// servers where high-quality embeddings are available.
-public struct RemoteEmbedder: Embedder {
-    public let kind: EmbedderKind = .openAICompatible
-    public let provider: any LLMProvider
-    public let modelID: String
-    public let dim: Int
-
-    public init(provider: any LLMProvider, modelID: String, dim: Int) {
-        self.provider = provider
-        self.modelID = modelID
-        self.dim = dim
-    }
-
-    public func embed(_ texts: [String]) async throws -> [[Float]] {
-        guard !texts.isEmpty else { throw EmbedderError.emptyInput }
-        let result = try await provider.embed(texts, model: modelID)
-        for vector in result {
-            if vector.count != dim {
-                throw EmbedderError.dimensionMismatch(expected: dim, got: vector.count)
-            }
-        }
-        return result
-    }
 }
 
 /// Stand-in embedder for tests and fallback paths. Produces deterministic
