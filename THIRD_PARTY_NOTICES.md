@@ -46,19 +46,31 @@ CommonMark spec; that NOTICE is preserved in the package and reproduced upstream
 
 ---
 
-## Bundled embedding model
+## Bundled MLX models
 
-**Qwen3-Embedding-4B (4-bit DWQ, MLX conversion)** — used on-device for RAG embeddings.
+Two on-device models are bundled for RAG (both Apache-2.0, Qwen3 architecture by
+Alibaba / the Qwen team). Their weights are committed to this repository via
+Git-LFS directly under `Sources/FyxLocalRAG/Resources/` (each `model.safetensors`
+is under GitHub's per-file LFS limit, so no reassembly step is needed).
 
-- Distribution: `mlx-community/Qwen3-Embedding-4B-4bit-DWQ`
-  (<https://huggingface.co/mlx-community/Qwen3-Embedding-4B-4bit-DWQ>)
-- Base model: `Qwen/Qwen3-Embedding-4B` by Alibaba / the Qwen team
-  (<https://huggingface.co/Qwen/Qwen3-Embedding-4B>)
+**Qwen3-Embedding-0.6B (8-bit, MLX conversion)** — on-device RAG embeddings (1024-dim).
+
+- Distribution: `majentik/Qwen3-Embedding-0.6B-MLX-8bit`
+  (<https://huggingface.co/majentik/Qwen3-Embedding-0.6B-MLX-8bit>)
+- Base model: `Qwen/Qwen3-Embedding-0.6B`
+  (<https://huggingface.co/Qwen/Qwen3-Embedding-0.6B>)
 - License: **Apache-2.0** (per the model card).
+- Ships under `Sources/FyxLocalRAG/Resources/Qwen3-Embedding-0.6B-MLX-8bit/`.
 
-The model weights are vendored into this repository via Git-LFS
-(`vendor/qwen3-safetensors/`) and reassembled at build time. The tokenizer and config
-files ship under `Sources/FyxLocalRAG/Resources/Qwen3-Embedding-4B-4bit-DWQ/`.
+**Qwen3-Reranker-0.6B (mxfp8, MLX conversion)** — on-device cross-encoder reranking
+of RAG results.
+
+- Distribution: `mlx-community/Qwen3-Reranker-0.6B-mxfp8`
+  (<https://huggingface.co/mlx-community/Qwen3-Reranker-0.6B-mxfp8>)
+- Base model: `Qwen/Qwen3-Reranker-0.6B`
+  (<https://huggingface.co/Qwen/Qwen3-Reranker-0.6B>)
+- License: **Apache-2.0** (per the model card).
+- Ships under `Sources/FyxLocalRAG/Resources/Qwen3-Reranker-0.6B-mxfp8/`.
 
 ---
 
