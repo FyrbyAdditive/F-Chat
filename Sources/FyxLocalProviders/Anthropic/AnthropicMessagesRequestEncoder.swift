@@ -25,30 +25,58 @@ public struct AnthropicMessagesRequestEncoder {
 
     public init() {}
 
+    /// Anthropic's floor for `thinking.budget_tokens`.
+    static let minThinkingBudget = 1_024
+    /// Headroom reserved for the visible reply when we have to grow
+    /// `max_tokens` to make room for a thinking budget.
+    static let thinkingReplyHeadroom = 4_096
+
     public func encode(_ request: ChatRequest, stream: Bool) throws -> Data {
+        // Resolve the thinking budget and max_tokens together — Anthropic
+        // requires budget_tokens < max_tokens (it does NOT clamp; it 400s):
+        //  - user left max unset → grow max_tokens to budget + headroom so a
+        //    high effort doesn't 400 against the 4096 default;
+        //  - user set max → clamp the budget under it, and drop thinking
+        //    entirely if the clamped budget falls below Anthropic's 1024 floor.
+        let requestedMax = request.maxOutputTokens ?? Self.defaultMaxTokens
+        var maxTokens = requestedMax
+        var thinkingBudget: Int?
+        if let effort = request.reasoningEffort {
+            let budget = Self.thinkingBudget(for: effort)
+            if request.maxOutputTokens == nil {
+                maxTokens = max(requestedMax, budget + Self.thinkingReplyHeadroom)
+                thinkingBudget = budget
+            } else {
+                let clamped = min(budget, requestedMax - Self.minThinkingBudget)
+                thinkingBudget = clamped >= Self.minThinkingBudget ? clamped : nil
+            }
+        }
+
         var json: [String: Any] = [
             "model": request.model,
             "messages": try encodeMessages(request.input),
             "stream": stream,
-            "max_tokens": request.maxOutputTokens ?? Self.defaultMaxTokens,
+            "max_tokens": maxTokens,
         ]
 
         if let instructions = request.instructions, !instructions.isEmpty {
             json["system"] = instructions
         }
-        if let temperature = request.temperature {
-            json["temperature"] = temperature
-        }
-        if let topP = request.topP {
-            json["top_p"] = topP
-        }
-        if let effort = request.reasoningEffort {
-            // Map the neutral effort level to an extended-thinking token
-            // budget. budget_tokens must be < max_tokens; the server clamps.
+        if let budget = thinkingBudget {
             json["thinking"] = [
                 "type": "enabled",
-                "budget_tokens": Self.thinkingBudget(for: effort),
+                "budget_tokens": budget,
             ]
+        } else {
+            // temperature/top_p are rejected alongside thinking (the API
+            // requires temperature == 1 when extended thinking is on), so
+            // they're only sent on non-thinking requests.
+            if let temperature = request.temperature {
+                json["temperature"] = temperature
+            }
+            if let topP = request.topP {
+                json["top_p"] = topP
+            }
         }
         if !request.tools.isEmpty {
             json["tools"] = try encodeTools(request.tools)
@@ -161,10 +189,10 @@ public struct AnthropicMessagesRequestEncoder {
         case .auto:
             return ["type": "auto", "disable_parallel_tool_use": disableParallel]
         case .none:
-            // Anthropic has no explicit "none"; omit tools to forbid use. As a
-            // close equivalent here, "auto" still lets the model answer without
-            // calling — but callers that truly mean none should pass no tools.
-            return ["type": "auto", "disable_parallel_tool_use": disableParallel]
+            // Anthropic's explicit "none": tools stay declared (prior tool_use
+            // blocks in history remain valid) but the model must not call any.
+            // The none variant takes no disable_parallel_tool_use field.
+            return ["type": "none"]
         case .required:
             return ["type": "any", "disable_parallel_tool_use": disableParallel]
         case .named(let name):

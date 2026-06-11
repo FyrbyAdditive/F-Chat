@@ -202,7 +202,70 @@ struct AnthropicMessagesRequestEncoderTests {
         let obj = try encodeToObject(req)
         let thinking = try #require(obj["thinking"] as? [String: Any])
         #expect(thinking["type"] as? String == "enabled")
-        #expect(thinking["budget_tokens"] as? Int == AnthropicMessagesRequestEncoder.thinkingBudget(for: .high))
+        let budget = AnthropicMessagesRequestEncoder.thinkingBudget(for: .high)
+        #expect(thinking["budget_tokens"] as? Int == budget)
+        // max_tokens unset → grown past the budget (Anthropic 400s when
+        // budget_tokens >= max_tokens; the old default 4096 was under the
+        // 16384 high budget).
+        #expect(obj["max_tokens"] as? Int == budget + AnthropicMessagesRequestEncoder.thinkingReplyHeadroom)
+    }
+
+    @Test func thinkingBudgetClampsUnderUserMaxTokens() throws {
+        let req = ChatRequest(
+            model: "claude",
+            input: [.message(role: .user, content: [.inputText("x")])],
+            maxOutputTokens: 8_192,
+            reasoningEffort: .high
+        )
+        let obj = try encodeToObject(req)
+        // User max is respected; budget clamps under it.
+        #expect(obj["max_tokens"] as? Int == 8_192)
+        let thinking = try #require(obj["thinking"] as? [String: Any])
+        #expect(thinking["budget_tokens"] as? Int == 8_192 - AnthropicMessagesRequestEncoder.minThinkingBudget)
+    }
+
+    @Test func thinkingDroppedWhenUserMaxTooSmall() throws {
+        let req = ChatRequest(
+            model: "claude",
+            input: [.message(role: .user, content: [.inputText("x")])],
+            temperature: 0.6,
+            maxOutputTokens: 1_500,
+            reasoningEffort: .high
+        )
+        let obj = try encodeToObject(req)
+        // 1500 can't fit the 1024 floor + reply; thinking is dropped and the
+        // request stays plain (temperature passes through again).
+        #expect(obj["thinking"] == nil)
+        #expect(obj["max_tokens"] as? Int == 1_500)
+        #expect(obj["temperature"] as? Double == 0.6)
+    }
+
+    @Test func temperatureAndTopPOmittedWithThinking() throws {
+        let req = ChatRequest(
+            model: "claude",
+            input: [.message(role: .user, content: [.inputText("x")])],
+            temperature: 0.3,
+            topP: 0.9,
+            reasoningEffort: .medium
+        )
+        let obj = try encodeToObject(req)
+        // Anthropic rejects temperature/top_p alongside thinking.
+        #expect(obj["thinking"] != nil)
+        #expect(obj["temperature"] == nil)
+        #expect(obj["top_p"] == nil)
+    }
+
+    @Test func toolChoiceNoneEncodesExplicitNone() throws {
+        let req = ChatRequest(
+            model: "claude",
+            input: [.message(role: .user, content: [.inputText("x")])],
+            tools: [ToolDefinition(name: "t", description: "d", parametersSchema: .emptyObject)],
+            toolChoice: .none
+        )
+        let obj = try encodeToObject(req)
+        let choice = try #require(obj["tool_choice"] as? [String: Any])
+        #expect(choice["type"] as? String == "none")
+        #expect(choice["disable_parallel_tool_use"] == nil)
     }
 
     @Test func imageDataBecomesBase64Source() throws {
