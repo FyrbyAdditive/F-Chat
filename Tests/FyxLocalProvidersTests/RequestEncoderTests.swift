@@ -34,6 +34,26 @@ struct OpenAIResponsesRequestEncoderTests {
         #expect(input[0]["role"] as? String == "user")
     }
 
+    @Test func thinkingContentIsDroppedAndEmptyMessagesSkipped() throws {
+        // Anthropic thinking blocks have no Responses representation; a
+        // message left empty after dropping them disappears entirely.
+        let req = ChatRequest(
+            model: "x",
+            input: [
+                .message(role: .user, content: [.inputText("hi")]),
+                .message(role: .assistant, content: [.thinking(text: "secret", signature: "sig")]),
+                .message(role: .assistant, content: [.redactedThinking(data: "X"), .outputText("visible")]),
+            ]
+        )
+        let json = try decode(try encoder.encode(req, stream: true))
+        let input = try #require(json["input"] as? [[String: Any]])
+        #expect(input.count == 2)
+        let lastContent = try #require(input[1]["content"] as? [[String: Any]])
+        #expect(lastContent.count == 1)
+        #expect(lastContent[0]["type"] as? String == "output_text")
+        #expect(!String(data: try encoder.encode(req, stream: true), encoding: .utf8)!.contains("secret"))
+    }
+
     @Test func encodesPreviousResponseIDWhenSet() throws {
         let req = ChatRequest(
             model: "x",

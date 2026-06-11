@@ -76,6 +76,13 @@ public enum InputContent: Sendable, Hashable {
     case outputText(String)
     case inputImage(url: String)
     case inputImageData(base64: String, mimeType: String)
+    /// Anthropic extended-thinking replay: verbatim thinking text + server
+    /// signature. Encoded only by the Anthropic provider (a thinking block
+    /// must lead the assistant turn that issued a tool_use); the OpenAI
+    /// encoders drop it.
+    case thinking(text: String, signature: String)
+    /// Anthropic `redacted_thinking` passthrough. Opaque; Anthropic-only.
+    case redactedThinking(data: String)
 }
 
 public enum ToolChoice: Sendable, Hashable {

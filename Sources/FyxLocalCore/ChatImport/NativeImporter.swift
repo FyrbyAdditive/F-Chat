@@ -54,6 +54,7 @@ enum NativeImporter {
                 switch item {
                 case .text(let s): text += (text.isEmpty ? "" : "\n") + s
                 case .reasoningSummary(let s): reasoning += (reasoning.isEmpty ? "" : "\n") + s
+                case .thinking(let s, _): reasoning += (reasoning.isEmpty ? "" : "\n") + s
                 default: continue
                 }
             }

@@ -80,7 +80,7 @@ public struct ConversationSummarizer: Sendable {
                     return "[tool call: \(rec.name)(\(rec.argumentsJSON))]"
                 case .toolResult(let rec):
                     return "[tool result for \(rec.callID): \(rec.outputJSON.prefix(400))]"
-                case .reasoningSummary:
+                case .reasoningSummary, .thinking, .redactedThinking:
                     return nil
                 case .image:
                     return "[image attached]"

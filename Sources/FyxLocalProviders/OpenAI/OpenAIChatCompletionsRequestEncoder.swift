@@ -56,9 +56,14 @@ public struct OpenAIChatCompletionsRequestEncoder {
         for item in items {
             switch item {
             case .message(let role, let content):
+                let encoded = encodeContent(content)
+                // A message left with no representable content (e.g. it held
+                // only Anthropic thinking blocks) shouldn't appear at all.
+                if let s = encoded as? String, s.isEmpty { continue }
+                if let parts = encoded as? [[String: Any]], parts.isEmpty { continue }
                 messages.append([
                     "role": chatRole(role),
-                    "content": encodeContent(content),
+                    "content": encoded,
                 ])
             case .functionCall(let callID, let name, let argumentsJSON):
                 let toolCall: [String: Any] = [
@@ -104,7 +109,9 @@ public struct OpenAIChatCompletionsRequestEncoder {
     }
 
     /// Content is a plain string when every part is text; otherwise an array of
-    /// typed parts so images can ride alongside the text.
+    /// typed parts so images can ride alongside the text. Anthropic thinking
+    /// blocks (`.thinking` / `.redactedThinking`) are dropped — they have no
+    /// Chat Completions representation.
     private func encodeContent(_ content: [InputContent]) -> Any {
         let hasImage = content.contains {
             if case .inputImage = $0 { return true }
@@ -121,7 +128,7 @@ public struct OpenAIChatCompletionsRequestEncoder {
             }.joined(separator: "\n")
             return text
         }
-        return content.map { part -> [String: Any] in
+        return content.compactMap { part -> [String: Any]? in
             switch part {
             case .inputText(let t), .outputText(let t):
                 return ["type": "text", "text": t]
@@ -129,6 +136,8 @@ public struct OpenAIChatCompletionsRequestEncoder {
                 return ["type": "image_url", "image_url": ["url": url]]
             case .inputImageData(let base64, let mimeType):
                 return ["type": "image_url", "image_url": ["url": "data:\(mimeType);base64,\(base64)"]]
+            case .thinking, .redactedThinking:
+                return nil
             }
         }
     }

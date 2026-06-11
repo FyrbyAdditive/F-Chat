@@ -27,6 +27,7 @@ public final class AnthropicMessagesEventDecoder {
         case text
         case toolUse(callID: String, name: String)
         case thinking
+        case redactedThinking(data: String)
         case other
     }
 
@@ -35,6 +36,9 @@ public final class AnthropicMessagesEventDecoder {
         var itemID: String
         var text: String = ""
         var argsJSON: String = ""
+        /// Accumulated `signature_delta` for a thinking block. Replayed with
+        /// the thinking text on follow-up requests in a tool-use loop.
+        var signature: String = ""
     }
 
     private var blocks: [Int: BlockState] = [:]
@@ -66,6 +70,12 @@ public final class AnthropicMessagesEventDecoder {
             case "thinking":
                 blocks[p.index] = BlockState(kind: .thinking, itemID: itemID)
                 return nil
+            case "redacted_thinking":
+                // Opaque safety-encrypted block; its data arrives complete on
+                // the start event. Surfaced at content_block_stop so callers
+                // can replay it.
+                blocks[p.index] = BlockState(kind: .redactedThinking(data: p.content_block.data ?? ""), itemID: itemID)
+                return nil
             case "text":
                 blocks[p.index] = BlockState(kind: .text, itemID: itemID)
                 return nil
@@ -93,7 +103,13 @@ public final class AnthropicMessagesEventDecoder {
                 return nil
             case "thinking_delta":
                 let chunk = p.delta.thinking ?? ""
+                state.text += chunk
+                blocks[p.index] = state
                 return .reasoningSummaryDelta(itemID: state.itemID, delta: chunk)
+            case "signature_delta":
+                state.signature += p.delta.signature ?? ""
+                blocks[p.index] = state
+                return nil
             default:
                 return nil
             }
@@ -110,7 +126,15 @@ public final class AnthropicMessagesEventDecoder {
                 // normalise an empty accumulation to a valid empty object.
                 let args = state.argsJSON.isEmpty ? "{}" : state.argsJSON
                 return .toolCallCompleted(itemID: state.itemID, callID: callID, name: name, arguments: args)
-            case .thinking, .other:
+            case .thinking:
+                return .reasoningCompleted(
+                    itemID: state.itemID,
+                    text: state.text,
+                    signature: state.signature.isEmpty ? nil : state.signature
+                )
+            case .redactedThinking(let data):
+                return .redactedThinking(itemID: state.itemID, data: data)
+            case .other:
                 return nil
             }
 
@@ -159,6 +183,7 @@ public final class AnthropicMessagesEventDecoder {
             let type: String
             let id: String?
             let name: String?
+            let data: String?   // redacted_thinking payload
         }
     }
 
@@ -170,6 +195,7 @@ public final class AnthropicMessagesEventDecoder {
             let text: String?
             let partial_json: String?
             let thinking: String?
+            let signature: String?
         }
     }
 

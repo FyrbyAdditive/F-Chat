@@ -190,6 +190,13 @@ struct MessageView: View {
             }
         case .reasoningSummary(let text):
             ReasoningBlock(text: text, isActive: isActivelyThinking)
+        case .thinking(let text, _):
+            // Signed Anthropic thinking renders exactly like a summary; the
+            // signature is replay plumbing, not display.
+            ReasoningBlock(text: text, isActive: isActivelyThinking)
+        case .redactedThinking:
+            // Opaque safety-encrypted block — kept for replay, nothing to show.
+            EmptyView()
         case .toolCall(let rec):
             ToolCallResultBlock(call: rec, result: resultsByCallID[rec.id])
         case .toolResult(let result):

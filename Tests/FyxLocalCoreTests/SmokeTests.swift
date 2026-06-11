@@ -15,12 +15,22 @@ struct CoreSmokeTests {
         let items: [MessageContent] = [
             .text("hello"),
             .reasoningSummary("thinking..."),
+            .thinking(text: "signed thinking", signature: "sigXYZ"),
+            .redactedThinking(data: "OPAQUE=="),
             .toolCall(ToolCallRecord(id: "call_1", name: "web_search", argumentsJSON: #"{"query":"x"}"#)),
             .toolResult(ToolResultRecord(callID: "call_1", outputJSON: "[]", isError: false, display: .markdown)),
         ]
         let data = try JSONEncoder().encode(items)
         let decoded = try JSONDecoder().decode([MessageContent].self, from: data)
         #expect(decoded == items)
+    }
+
+    @Test func oldShapeReasoningSummaryStillDecodes() throws {
+        // The exact JSON shape state.json has always written for reasoning —
+        // adding the signed .thinking case must not disturb it.
+        let json = #"[{"type":"reasoningSummary","text":"old thoughts"}]"#
+        let decoded = try JSONDecoder().decode([MessageContent].self, from: Data(json.utf8))
+        #expect(decoded == [.reasoningSummary("old thoughts")])
     }
 
     @Test func plainTextOnlyConcatenatesTextItems() {

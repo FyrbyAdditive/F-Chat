@@ -59,13 +59,17 @@ public struct OpenAIResponsesRequestEncoder {
     }
 
     private func encodeInput(_ items: [InputItem]) -> [[String: Any]] {
-        items.map { item in
+        items.compactMap { item in
             switch item {
             case .message(let role, let content):
+                // Anthropic thinking blocks have no Responses representation;
+                // drop them, and a message left empty drops entirely.
+                let parts = content.compactMap(encodeContent)
+                if parts.isEmpty { return nil }
                 return [
                     "type": "message",
                     "role": role.rawValue,
-                    "content": content.map(encodeContent),
+                    "content": parts,
                 ]
             case .functionCall(let callID, let name, let arguments):
                 return [
@@ -89,7 +93,7 @@ public struct OpenAIResponsesRequestEncoder {
         }
     }
 
-    private func encodeContent(_ content: InputContent) -> [String: Any] {
+    private func encodeContent(_ content: InputContent) -> [String: Any]? {
         switch content {
         case .inputText(let text):
             return ["type": "input_text", "text": text]
@@ -99,6 +103,8 @@ public struct OpenAIResponsesRequestEncoder {
             return ["type": "input_image", "image_url": url]
         case .inputImageData(let base64, let mimeType):
             return ["type": "input_image", "image_url": "data:\(mimeType);base64,\(base64)"]
+        case .thinking, .redactedThinking:
+            return nil
         }
     }
 

@@ -817,6 +817,21 @@ final class ChatViewModel {
             } else {
                 message.contentItems.append(.reasoningSummary(delta))
             }
+        case .reasoningCompleted(_, let text, let signature):
+            // Signed (Anthropic) thinking upgrades the streamed summary to a
+            // replayable .thinking item — same text, plus the signature the
+            // API demands back during tool loops. Unsigned completions keep
+            // the accumulated summary as-is.
+            if let signature {
+                let upgraded = MessageContent.thinking(text: text, signature: signature)
+                if case .reasoningSummary = message.contentItems.last {
+                    message.contentItems[message.contentItems.count - 1] = upgraded
+                } else {
+                    message.contentItems.append(upgraded)
+                }
+            }
+        case .redactedThinking(_, let data):
+            message.contentItems.append(.redactedThinking(data: data))
         case .toolCallStarted(let callID, let name):
             message.contentItems.append(.toolCall(ToolCallRecord(id: callID, name: name, argumentsJSON: "", status: .running)))
         case .toolCallArgumentsDelta(let callID, let delta):

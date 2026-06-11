@@ -75,6 +75,44 @@ struct AnthropicMessagesEventDecoderTests {
         #expect(delta == "hmm")
     }
 
+    @Test func thinkingBlockCompletesWithSignature() throws {
+        let d = decoder()
+        _ = try d.decode(SSEEvent(event: "message_start", data: #"{"type":"message_start","message":{"id":"m"}}"#))
+        _ = try d.decode(SSEEvent(event: "content_block_start", data: #"{"type":"content_block_start","index":0,"content_block":{"type":"thinking"}}"#))
+        _ = try d.decode(SSEEvent(event: "content_block_delta", data: #"{"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"step one. "}}"#))
+        _ = try d.decode(SSEEvent(event: "content_block_delta", data: #"{"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"step two."}}"#))
+        _ = try d.decode(SSEEvent(event: "content_block_delta", data: #"{"type":"content_block_delta","index":0,"delta":{"type":"signature_delta","signature":"sigAAA"}}"#))
+        _ = try d.decode(SSEEvent(event: "content_block_delta", data: #"{"type":"content_block_delta","index":0,"delta":{"type":"signature_delta","signature":"BBB"}}"#))
+        let stop = try d.decode(SSEEvent(event: "content_block_stop", data: #"{"type":"content_block_stop","index":0}"#))
+        guard case .reasoningCompleted(_, let text, let signature) = stop else {
+            Issue.record("expected .reasoningCompleted, got \(String(describing: stop))"); return
+        }
+        #expect(text == "step one. step two.")
+        #expect(signature == "sigAAABBB")
+    }
+
+    @Test func thinkingBlockWithoutSignatureCompletesNilSignature() throws {
+        let d = decoder()
+        _ = try d.decode(SSEEvent(event: "message_start", data: #"{"type":"message_start","message":{"id":"m"}}"#))
+        _ = try d.decode(SSEEvent(event: "content_block_start", data: #"{"type":"content_block_start","index":0,"content_block":{"type":"thinking"}}"#))
+        _ = try d.decode(SSEEvent(event: "content_block_delta", data: #"{"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"hmm"}}"#))
+        let stop = try d.decode(SSEEvent(event: "content_block_stop", data: #"{"type":"content_block_stop","index":0}"#))
+        guard case .reasoningCompleted(_, "hmm", nil) = stop else {
+            Issue.record("expected unsigned .reasoningCompleted, got \(String(describing: stop))"); return
+        }
+    }
+
+    @Test func redactedThinkingBlockSurfacesData() throws {
+        let d = decoder()
+        _ = try d.decode(SSEEvent(event: "message_start", data: #"{"type":"message_start","message":{"id":"m"}}"#))
+        _ = try d.decode(SSEEvent(event: "content_block_start", data: #"{"type":"content_block_start","index":0,"content_block":{"type":"redacted_thinking","data":"OPAQUE=="}}"#))
+        let stop = try d.decode(SSEEvent(event: "content_block_stop", data: #"{"type":"content_block_stop","index":0}"#))
+        guard case .redactedThinking(_, let data) = stop else {
+            Issue.record("expected .redactedThinking, got \(String(describing: stop))"); return
+        }
+        #expect(data == "OPAQUE==")
+    }
+
     @Test func messageDeltaGivesUsageAndStopCompletes() throws {
         let d = decoder()
         _ = try d.decode(SSEEvent(event: "message_start", data: #"{"type":"message_start","message":{"id":"m","usage":{"input_tokens":7}}}"#))
@@ -253,6 +291,40 @@ struct AnthropicMessagesRequestEncoderTests {
         #expect(obj["thinking"] != nil)
         #expect(obj["temperature"] == nil)
         #expect(obj["top_p"] == nil)
+    }
+
+    @Test func thinkingBlocksReplayAheadOfToolUse() throws {
+        // The tool-loop continuation shape: assistant thinking (signed) +
+        // tool_use, then the user tool_result. The thinking item rides as
+        // message content and must coalesce into the SAME assistant message
+        // as the following tool_use, leading it.
+        let req = ChatRequest(
+            model: "claude",
+            input: [
+                .message(role: .user, content: [.inputText("search cats")]),
+                .message(role: .assistant, content: [
+                    .thinking(text: "I should search.", signature: "sig123"),
+                    .redactedThinking(data: "OPAQUE=="),
+                ]),
+                .functionCall(callID: "toolu_1", name: "web_search", argumentsJSON: #"{"q":"cats"}"#),
+                .functionCallOutput(callID: "toolu_1", outputJSON: #"{"results":[]}"#),
+            ],
+            maxOutputTokens: 500
+        )
+        let obj = try encodeToObject(req)
+        let messages = try #require(obj["messages"] as? [[String: Any]])
+        // user(text) | assistant(thinking, redacted_thinking, tool_use) | user(tool_result)
+        #expect(messages.count == 3)
+        #expect(messages[1]["role"] as? String == "assistant")
+        let assistantBlocks = try #require(messages[1]["content"] as? [[String: Any]])
+        #expect(assistantBlocks.count == 3)
+        #expect(assistantBlocks[0]["type"] as? String == "thinking")
+        #expect(assistantBlocks[0]["thinking"] as? String == "I should search.")
+        #expect(assistantBlocks[0]["signature"] as? String == "sig123")
+        #expect(assistantBlocks[1]["type"] as? String == "redacted_thinking")
+        #expect(assistantBlocks[1]["data"] as? String == "OPAQUE==")
+        #expect(assistantBlocks[2]["type"] as? String == "tool_use")
+        #expect(assistantBlocks[2]["id"] as? String == "toolu_1")
     }
 
     @Test func toolChoiceNoneEncodesExplicitNone() throws {

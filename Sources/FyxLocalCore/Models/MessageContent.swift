@@ -10,6 +10,15 @@ public enum MessageRole: String, Codable, Sendable, CaseIterable {
 public enum MessageContent: Codable, Sendable, Hashable {
     case text(String)
     case reasoningSummary(String)
+    /// An Anthropic extended-thinking block: the verbatim thinking text plus
+    /// the server's cryptographic signature. Unlike `.reasoningSummary`
+    /// (display-only), signed thinking must be replayed on follow-up requests
+    /// in a tool-use loop — the API 400s when the assistant turn that issued
+    /// a tool_use doesn't lead with its thinking block.
+    case thinking(text: String, signature: String)
+    /// An Anthropic `redacted_thinking` block (safety-encrypted). Opaque; must
+    /// round-trip back to the API unchanged, never rendered.
+    case redactedThinking(data: String)
     case toolCall(ToolCallRecord)
     case toolResult(ToolResultRecord)
     /// Image / attachment bytes live in the on-disk `BlobStore`, referenced by
@@ -60,7 +69,7 @@ public enum MessageContent: Codable, Sendable, Hashable {
     // MARK: - Codable (back-compatible with the old inline-base64 shape)
 
     private enum CodingKeys: String, CodingKey {
-        case type, text, record, ref
+        case type, text, record, ref, signature
         // Legacy inline fields (pre-blob-store):
         case data, mimeType, filename
     }
@@ -73,6 +82,13 @@ public enum MessageContent: Codable, Sendable, Hashable {
             self = .text(try c.decode(String.self, forKey: .text))
         case "reasoningSummary":
             self = .reasoningSummary(try c.decode(String.self, forKey: .text))
+        case "thinking":
+            self = .thinking(
+                text: try c.decode(String.self, forKey: .text),
+                signature: try c.decode(String.self, forKey: .signature)
+            )
+        case "redactedThinking":
+            self = .redactedThinking(data: try c.decode(String.self, forKey: .text))
         case "toolCall":
             self = .toolCall(try c.decode(ToolCallRecord.self, forKey: .record))
         case "toolResult":
@@ -107,6 +123,12 @@ public enum MessageContent: Codable, Sendable, Hashable {
             try c.encode("text", forKey: .type); try c.encode(s, forKey: .text)
         case .reasoningSummary(let s):
             try c.encode("reasoningSummary", forKey: .type); try c.encode(s, forKey: .text)
+        case .thinking(let text, let signature):
+            try c.encode("thinking", forKey: .type)
+            try c.encode(text, forKey: .text)
+            try c.encode(signature, forKey: .signature)
+        case .redactedThinking(let data):
+            try c.encode("redactedThinking", forKey: .type); try c.encode(data, forKey: .text)
         case .toolCall(let r):
             try c.encode("toolCall", forKey: .type); try c.encode(r, forKey: .record)
         case .toolResult(let r):

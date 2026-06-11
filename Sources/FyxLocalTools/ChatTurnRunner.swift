@@ -12,6 +12,12 @@ public enum ChatTurnEvent: Sendable, Hashable {
     case textDelta(itemID: String, delta: String)
     case textCompleted(itemID: String, fullText: String)
     case reasoningSummaryDelta(itemID: String, delta: String)
+    /// A reasoning/thinking block finished. A non-nil `signature` marks an
+    /// Anthropic signed thinking block that must be retained on the message
+    /// for replay — tool loops 400 without it.
+    case reasoningCompleted(itemID: String, text: String, signature: String?)
+    /// Anthropic `redacted_thinking` passthrough (opaque; retained, never shown).
+    case redactedThinking(itemID: String, data: String)
     case toolCallStarted(callID: String, name: String)
     case toolCallArgumentsDelta(callID: String, delta: String)
     case toolCallReady(callID: String, name: String, arguments: String)
@@ -75,6 +81,11 @@ public struct ChatTurnRunner: Sendable {
             var pendingArgs: [String: String] = [:]
             var toolCallNames: [String: String] = [:]
             var orderedCallIDs: [String] = []
+            // Signed thinking / redacted blocks from THIS iteration. When the
+            // turn continues with tool results, Anthropic requires the
+            // assistant message that issued the tool_use to lead with these
+            // blocks, so they're replayed into the accumulated input below.
+            var thinkingBlocks: [InputContent] = []
 
             for try await event in provider.streamResponse(request) {
                 try Task.checkCancellation()
@@ -89,6 +100,14 @@ public struct ChatTurnRunner: Sendable {
                     emit(.textCompleted(itemID: itemID, fullText: full))
                 case .reasoningSummaryDelta(let itemID, let delta):
                     emit(.reasoningSummaryDelta(itemID: itemID, delta: delta))
+                case .reasoningCompleted(let itemID, let text, let signature):
+                    if let signature {
+                        thinkingBlocks.append(.thinking(text: text, signature: signature))
+                    }
+                    emit(.reasoningCompleted(itemID: itemID, text: text, signature: signature))
+                case .redactedThinking(let itemID, let data):
+                    thinkingBlocks.append(.redactedThinking(data: data))
+                    emit(.redactedThinking(itemID: itemID, data: data))
                 case .reasoningEncryptedContent:
                     // Held by the caller via store flag; not surfaced to the UI directly.
                     break
@@ -144,6 +163,13 @@ public struct ChatTurnRunner: Sendable {
                 emit(.toolResult(callID: invocation.callID, output: output))
             }
 
+            // Replay this iteration's signed thinking ahead of its tool calls.
+            // The Anthropic encoder coalesces the assistant-role message with
+            // the following tool_use blocks into one assistant turn that leads
+            // with thinking, as the API requires; OpenAI encoders drop it.
+            if !thinkingBlocks.isEmpty {
+                accumulatedInput.append(.message(role: .assistant, content: thinkingBlocks))
+            }
             for (invocation, _) in results {
                 accumulatedInput.append(.functionCall(
                     callID: invocation.callID,

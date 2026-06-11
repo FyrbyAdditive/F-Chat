@@ -161,6 +161,13 @@ public struct AnthropicMessagesRequestEncoder {
                 "type": "image",
                 "source": ["type": "base64", "media_type": mimeType, "data": base64],
             ]
+        case .thinking(let text, let signature):
+            // Signed extended-thinking replay. Must lead the assistant turn
+            // that issued a tool_use, which falls out of input ordering (the
+            // thinking item precedes the functionCall) + same-role coalescing.
+            return ["type": "thinking", "thinking": text, "signature": signature]
+        case .redactedThinking(let data):
+            return ["type": "redacted_thinking", "data": data]
         }
     }
 

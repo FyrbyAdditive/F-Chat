@@ -97,6 +97,25 @@ struct OpenAIChatCompletionsRequestEncoderTests {
         #expect(tool["tool_call_id"] as? String == "call_1")
     }
 
+    @Test func thinkingContentIsDroppedAndEmptyMessagesSkipped() throws {
+        // Anthropic thinking blocks have no CC representation; a message left
+        // with nothing after dropping them must not appear at all.
+        let req = ChatRequest(
+            model: "m",
+            input: [
+                .message(role: .user, content: [.inputText("hi")]),
+                .message(role: .assistant, content: [.thinking(text: "secret", signature: "sig")]),
+                .message(role: .assistant, content: [.redactedThinking(data: "X"), .outputText("visible")]),
+            ]
+        )
+        let json = try object(try encoder.encode(req, stream: true))
+        let messages = try #require(json["messages"] as? [[String: Any]])
+        // user + the assistant message that still has text; thinking-only one gone.
+        #expect(messages.count == 2)
+        #expect(messages[1]["content"] as? String == "visible")
+        #expect(!String(data: try encoder.encode(req, stream: true), encoding: .utf8)!.contains("secret"))
+    }
+
     @Test func samplingParams() throws {
         let req = ChatRequest(
             model: "m",

@@ -101,8 +101,10 @@ public enum ChatExporter {
                     segments.append((false, s))
                 case .reasoningSummary(let s) where !s.isEmpty:
                     segments.append((true, s))
+                case .thinking(let s, _) where !s.isEmpty:
+                    segments.append((true, s))
                 default:
-                    continue  // tool calls/results, images, attachments — omitted
+                    continue  // tool calls/results, images, attachments, redacted thinking — omitted
                 }
             }
             guard !segments.isEmpty else { return nil }

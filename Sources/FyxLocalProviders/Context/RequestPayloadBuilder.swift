@@ -125,6 +125,16 @@ public struct RequestPayloadBuilder: Sendable {
                 // bias future turns. Always dropped from the sent payload.
                 break
 
+            case .thinking(let text, let signature):
+                // Signed Anthropic thinking blocks are replayed (the API
+                // requires them ahead of tool_use in the same assistant turn,
+                // and replaying keeps prompt caching effective). Ordering is
+                // preserved by riding in textRuns; OpenAI encoders drop them.
+                textRuns.append(.thinking(text: text, signature: signature))
+
+            case .redactedThinking(let data):
+                textRuns.append(.redactedThinking(data: data))
+
             case .toolCall(let rec):
                 // Flush any accumulated text first so message ordering stays
                 // right (text → toolCall → … → text rather than re-ordering).
@@ -247,6 +257,11 @@ public struct RequestPayloadBuilder: Sendable {
                 total += tokenizer.countTokens(in: s)
             case .reasoningSummary:
                 break
+            case .thinking(let text, _):
+                // Replayed to Anthropic, so it does occupy context there.
+                total += tokenizer.countTokens(in: text)
+            case .redactedThinking:
+                total += 50  // opaque blob; coarse placeholder
             case .toolCall(let rec):
                 total += tokenizer.countTokens(in: rec.name)
                 total += tokenizer.countTokens(in: rec.argumentsJSON.isEmpty ? "{}" : rec.argumentsJSON)
@@ -290,6 +305,10 @@ public struct RequestPayloadBuilder: Sendable {
                         return acc + 150
                     case .inputImageData:
                         return acc + 150
+                    case .thinking(let text, _):
+                        return acc + options.tokenizer.countTokens(in: text)
+                    case .redactedThinking:
+                        return acc + 50
                     }
                 }
             case .functionCall(_, _, let argsJSON):
@@ -417,6 +436,13 @@ public final class MessageTokenCountCache: Sendable {
             case .reasoningSummary(let s):
                 hasher.combine(1)
                 hasher.combine(s.count)
+            case .thinking(let text, let signature):
+                hasher.combine(6)
+                hasher.combine(text.count)
+                hasher.combine(signature.count)
+            case .redactedThinking(let data):
+                hasher.combine(7)
+                hasher.combine(data.count)
             case .toolCall(let rec):
                 hasher.combine(2)
                 hasher.combine(rec.argumentsJSON.count)
