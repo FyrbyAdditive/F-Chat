@@ -19,6 +19,23 @@ enum ProviderHTTP {
         }
     }
 
+    /// Host-root fallback URL for model listing. Some API-compatible gateways
+    /// serve chat under a sub-path but expose `GET /models` only at the host
+    /// root — DeepSeek's Anthropic-compatible endpoint is the canonical case:
+    /// chat lives at `…/anthropic/v1/messages`, but models live at
+    /// `https://api.deepseek.com/models`, *below* the documented base.
+    /// Returns `scheme://host[:port]/models`, or nil when the configured base
+    /// has no sub-path (the fallback would just repeat the failed request).
+    static func hostRootModelsURL(from base: URL) -> URL? {
+        guard var components = URLComponents(url: base, resolvingAgainstBaseURL: false),
+              components.host != nil else { return nil }
+        let basePath = components.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        guard !basePath.isEmpty else { return nil }
+        components.path = "/models"
+        components.query = nil
+        return components.url
+    }
+
     /// Decode an OpenAI-style embeddings response (`{ data: [{ index, embedding }] }`),
     /// sorted by index. The wire shape is the de-facto standard, so both
     /// providers share it.

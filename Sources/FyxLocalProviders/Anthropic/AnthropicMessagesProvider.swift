@@ -39,12 +39,32 @@ public struct AnthropicMessagesProvider: LLMProvider {
     }
 
     public func listModels() async throws -> [ModelInfo] {
+        do {
+            return try await listModels(modelsURL: baseURL.appending(path: "models"), bearerAuth: false)
+        } catch let primaryError {
+            // Generic gateway fallback: some Anthropic-compatible gateways keep
+            // chat under a sub-path but serve `GET /models` only at the host
+            // root (DeepSeek: `…/anthropic/v1/messages`, but models at
+            // `https://api.deepseek.com/models`). Retry once at the root —
+            // that surface is usually the gateway's OpenAI side, so the retry
+            // also carries `Authorization: Bearer` alongside `x-api-key`.
+            // The ORIGINAL error is rethrown if the fallback can't help; it
+            // points at the URL the user actually configured.
+            guard let rootModels = ProviderHTTP.hostRootModelsURL(from: baseURL) else { throw primaryError }
+            guard let models = try? await listModels(modelsURL: rootModels, bearerAuth: true),
+                  !models.isEmpty else { throw primaryError }
+            return models
+        }
+    }
+
+    private func listModels(modelsURL: URL, bearerAuth: Bool) async throws -> [ModelInfo] {
         var models: [ModelInfo] = []
         var afterID: String? = nil
         // Paginate via `has_more` + `last_id`. Bounded to avoid a runaway loop
-        // if a gateway misreports has_more.
+        // if a gateway misreports has_more. OpenAI-style endpoints (the
+        // fallback case) omit has_more entirely → single iteration.
         for _ in 0..<20 {
-            var components = URLComponents(url: baseURL.appending(path: "models"), resolvingAgainstBaseURL: false)
+            var components = URLComponents(url: modelsURL, resolvingAgainstBaseURL: false)
             var queryItems = [URLQueryItem(name: "limit", value: "1000")]
             if let afterID { queryItems.append(URLQueryItem(name: "after_id", value: afterID)) }
             components?.queryItems = queryItems
@@ -53,6 +73,9 @@ public struct AnthropicMessagesProvider: LLMProvider {
             var request = URLRequest(url: url)
             request.httpMethod = "GET"
             try await applyAuth(&request)
+            if bearerAuth, let key = try await secretStore.secret(for: KeychainAccount.providerAPIKey(id)) {
+                request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
+            }
             for (k, v) in extraHeaders { request.setValue(v, forHTTPHeaderField: k) }
 
             let (data, response) = try await session.data(for: request)
