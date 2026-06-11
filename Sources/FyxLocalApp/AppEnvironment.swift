@@ -1046,6 +1046,11 @@ final class AppEnvironment {
     /// linger on disk forever, since blobs are content-addressed and shared.
     /// Cheap — it's a directory listing plus set membership, no blob reads.
     func gcBlobs() {
+        // Persist the current (post-delete) state FIRST. GC runs against the
+        // in-memory conversations; if blob files were deleted while the
+        // debounced save was still pending, a crash in that window would leave
+        // state.json referencing blobs that no longer exist on disk.
+        persistNow()
         let live = Set(
             conversations
                 .flatMap { $0.messages }
@@ -1170,6 +1175,10 @@ final class AppEnvironment {
     /// `sidebarSelection` / persisted `selectedConversationID`. MUST NOT write
     /// back into `selectedConversationIDs` (that would re-fire the observer).
     func reconcileSelection(old: Set<ConversationID>, new: Set<ConversationID>) {
+        // No-op when the set didn't actually change (SwiftUI can re-fire the
+        // observer with identical values) — avoids redundant anchor work and
+        // downstream selection writes.
+        guard old != new else { return }
         // Empty selection: if a chat was showing, drop to the placeholder; if a
         // footer pane is active (the footer just cleared the set), leave it.
         guard let anchor = Self.recencyAnchor(old: old, new: new, order: conversations, previous: lastSelectedConversationID) else {
