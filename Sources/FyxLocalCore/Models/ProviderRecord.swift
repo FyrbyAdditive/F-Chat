@@ -192,6 +192,17 @@ public struct ProviderSamplingDefaults: Sendable, Hashable, Codable {
     public var temperature: Double?
     public var topP: Double?
     public var maxOutputTokens: Int?
+    /// Sequences that stop generation (OpenAI `stop` / Anthropic
+    /// `stop_sequences`). All-new fields below are Optional so the
+    /// synthesized Decodable keeps loading state files written before
+    /// they existed (decodeIfPresent → nil).
+    public var stopSequences: [String]?
+    /// OpenAI Chat Completions only; other providers ignore it.
+    public var frequencyPenalty: Double?
+    /// OpenAI Chat Completions only; other providers ignore it.
+    public var presencePenalty: Double?
+    /// Best-effort deterministic sampling (OpenAI Chat Completions only).
+    public var seed: Int?
     public var reasoningEffort: ReasoningEffort?
     public var parallelToolCalls: Bool
     public var maxToolIterations: Int
@@ -201,6 +212,10 @@ public struct ProviderSamplingDefaults: Sendable, Hashable, Codable {
         temperature: Double? = nil,
         topP: Double? = nil,
         maxOutputTokens: Int? = nil,
+        stopSequences: [String]? = nil,
+        frequencyPenalty: Double? = nil,
+        presencePenalty: Double? = nil,
+        seed: Int? = nil,
         reasoningEffort: ReasoningEffort? = nil,
         parallelToolCalls: Bool = true,
         maxToolIterations: Int = 8,
@@ -209,6 +224,10 @@ public struct ProviderSamplingDefaults: Sendable, Hashable, Codable {
         self.temperature = temperature
         self.topP = topP
         self.maxOutputTokens = maxOutputTokens
+        self.stopSequences = stopSequences
+        self.frequencyPenalty = frequencyPenalty
+        self.presencePenalty = presencePenalty
+        self.seed = seed
         self.reasoningEffort = reasoningEffort
         self.parallelToolCalls = parallelToolCalls
         self.maxToolIterations = maxToolIterations

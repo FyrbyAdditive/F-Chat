@@ -62,6 +62,11 @@ public struct AnthropicMessagesRequestEncoder {
         if let instructions = request.instructions, !instructions.isEmpty {
             json["system"] = instructions
         }
+        // frequency/presence penalty and seed have no Anthropic equivalent;
+        // only the stop sequences carry over.
+        if let stops = request.stopSequences, !stops.isEmpty {
+            json["stop_sequences"] = stops
+        }
         if let budget = thinkingBudget {
             json["thinking"] = [
                 "type": "enabled",

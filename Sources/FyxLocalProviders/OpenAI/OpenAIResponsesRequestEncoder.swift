@@ -31,6 +31,8 @@ public struct OpenAIResponsesRequestEncoder {
         if let maxTokens = request.maxOutputTokens {
             json["max_output_tokens"] = maxTokens
         }
+        // stopSequences / frequencyPenalty / presencePenalty / seed are not
+        // part of the Responses API surface — deliberately not encoded.
         if request.reasoningEffort != nil || request.reasoningSummary != nil {
             var reasoning: [String: Any] = [:]
             if let effort = request.reasoningEffort {

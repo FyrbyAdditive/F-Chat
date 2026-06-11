@@ -729,6 +729,10 @@ final class ChatViewModel {
             temperature: sampling.temperature,
             topP: sampling.topP,
             maxOutputTokens: sampling.maxOutputTokens,
+            stopSequences: sampling.stopSequences,
+            frequencyPenalty: sampling.frequencyPenalty,
+            presencePenalty: sampling.presencePenalty,
+            seed: sampling.seed,
             reasoningEffort: conversation.reasoningEffort,
             // Ask the server to stream a chain-of-thought summary so the
             // user sees what the model is thinking. Without this vLLM /

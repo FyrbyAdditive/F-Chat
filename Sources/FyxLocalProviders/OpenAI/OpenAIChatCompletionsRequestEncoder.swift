@@ -37,6 +37,10 @@ public struct OpenAIChatCompletionsRequestEncoder {
         if let temperature = request.temperature { json["temperature"] = temperature }
         if let topP = request.topP { json["top_p"] = topP }
         if let maxOut = request.maxOutputTokens { json["max_tokens"] = maxOut }
+        if let stops = request.stopSequences, !stops.isEmpty { json["stop"] = stops }
+        if let fp = request.frequencyPenalty { json["frequency_penalty"] = fp }
+        if let pp = request.presencePenalty { json["presence_penalty"] = pp }
+        if let seed = request.seed { json["seed"] = seed }
         if let effort = request.reasoningEffort { json["reasoning_effort"] = effort.rawValue }
         if !request.tools.isEmpty {
             json["tools"] = try encodeTools(request.tools)

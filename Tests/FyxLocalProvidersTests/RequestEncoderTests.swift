@@ -34,6 +34,25 @@ struct OpenAIResponsesRequestEncoderTests {
         #expect(input[0]["role"] as? String == "user")
     }
 
+    @Test func extendedSamplingParamsAreNotInResponsesAPI() throws {
+        // stop/penalties/seed don't exist on the Responses surface; setting
+        // them must not leak unknown keys onto the wire.
+        let req = ChatRequest(
+            model: "x",
+            input: [.message(role: .user, content: [.inputText("hi")])],
+            stopSequences: ["END"],
+            frequencyPenalty: 0.5,
+            presencePenalty: 0.5,
+            seed: 7
+        )
+        let json = try decode(try encoder.encode(req, stream: true))
+        #expect(json["stop"] == nil)
+        #expect(json["stop_sequences"] == nil)
+        #expect(json["frequency_penalty"] == nil)
+        #expect(json["presence_penalty"] == nil)
+        #expect(json["seed"] == nil)
+    }
+
     @Test func thinkingContentIsDroppedAndEmptyMessagesSkipped() throws {
         // Anthropic thinking blocks have no Responses representation; a
         // message left empty after dropping them disappears entirely.

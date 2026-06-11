@@ -327,6 +327,23 @@ struct AnthropicMessagesRequestEncoderTests {
         #expect(assistantBlocks[2]["id"] as? String == "toolu_1")
     }
 
+    @Test func stopSequencesEncodedPenaltiesAndSeedSkipped() throws {
+        let req = ChatRequest(
+            model: "claude",
+            input: [.message(role: .user, content: [.inputText("x")])],
+            stopSequences: ["END"],
+            frequencyPenalty: 0.5,
+            presencePenalty: 0.5,
+            seed: 7
+        )
+        let obj = try encodeToObject(req)
+        #expect(obj["stop_sequences"] as? [String] == ["END"])
+        // No Anthropic equivalents — must not leak onto the wire.
+        #expect(obj["frequency_penalty"] == nil)
+        #expect(obj["presence_penalty"] == nil)
+        #expect(obj["seed"] == nil)
+    }
+
     @Test func toolChoiceNoneEncodesExplicitNone() throws {
         let req = ChatRequest(
             model: "claude",
@@ -404,6 +421,18 @@ struct ProviderRecordAPIKindTests {
         )
         let back = try d.decode(ProviderRecord.self, from: try e.encode(rec))
         #expect(back.apiKind == .anthropicMessages)
+    }
+
+    @Test func samplingDefaultsWithoutNewFieldsDecode() throws {
+        // A sampling block written before stopSequences/penalties/seed existed
+        // must keep decoding (all new fields are Optional → decodeIfPresent).
+        let json = #"{"parallelToolCalls":true,"maxToolIterations":8,"defaultEnabledBuiltInTools":["web_search"],"temperature":0.7}"#
+        let s = try JSONDecoder().decode(ProviderSamplingDefaults.self, from: Data(json.utf8))
+        #expect(s.temperature == 0.7)
+        #expect(s.stopSequences == nil)
+        #expect(s.frequencyPenalty == nil)
+        #expect(s.presencePenalty == nil)
+        #expect(s.seed == nil)
     }
 
     @Test func apiKindDefaultsAndHelpers() {

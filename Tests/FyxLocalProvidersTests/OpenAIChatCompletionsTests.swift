@@ -127,6 +127,27 @@ struct OpenAIChatCompletionsRequestEncoderTests {
         #expect(json["top_p"] as? Double == 0.9)
         #expect(json["max_tokens"] as? Int == 256)
         #expect((json["stream_options"] as? [String: Any])?["include_usage"] as? Bool == true)
+        // Unset extras stay off the wire entirely.
+        #expect(json["stop"] == nil)
+        #expect(json["frequency_penalty"] == nil)
+        #expect(json["presence_penalty"] == nil)
+        #expect(json["seed"] == nil)
+    }
+
+    @Test func extendedSamplingParamsEncoded() throws {
+        let req = ChatRequest(
+            model: "m",
+            input: [.message(role: .user, content: [.inputText("hi")])],
+            stopSequences: ["END", "STOP"],
+            frequencyPenalty: 0.5,
+            presencePenalty: -0.25,
+            seed: 1234
+        )
+        let json = try object(try encoder.encode(req, stream: true))
+        #expect(json["stop"] as? [String] == ["END", "STOP"])
+        #expect(json["frequency_penalty"] as? Double == 0.5)
+        #expect(json["presence_penalty"] as? Double == -0.25)
+        #expect(json["seed"] as? Int == 1234)
     }
 }
 

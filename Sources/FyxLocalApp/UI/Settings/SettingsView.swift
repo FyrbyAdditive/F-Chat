@@ -712,6 +712,24 @@ private struct SamplingSection: View {
                 value: Binding(get: { sampling.maxOutputTokens }, set: { sampling.maxOutputTokens = $0 }),
                 defaultValue: 2048
             )
+            OptionalNumericRow(
+                label: "Frequency penalty",
+                placeholder: "server default · OpenAI Chat Completions only",
+                value: Binding(get: { sampling.frequencyPenalty }, set: { sampling.frequencyPenalty = $0 }),
+                range: -2.0...2.0,
+                step: 0.05,
+                format: "%.2f"
+            )
+            OptionalNumericRow(
+                label: "Presence penalty",
+                placeholder: "server default · OpenAI Chat Completions only",
+                value: Binding(get: { sampling.presencePenalty }, set: { sampling.presencePenalty = $0 }),
+                range: -2.0...2.0,
+                step: 0.05,
+                format: "%.2f"
+            )
+            SeedRow(value: Binding(get: { sampling.seed }, set: { sampling.seed = $0 }))
+            StopSequencesRow(value: Binding(get: { sampling.stopSequences }, set: { sampling.stopSequences = $0 }))
 
             Stepper(value: Binding(
                 get: { sampling.maxToolIterations },
@@ -838,6 +856,62 @@ private struct ContextSection: View {
                     Text("\(context.recentKeepCount)").foregroundStyle(.secondary)
                 }
             }
+        }
+    }
+}
+
+/// Comma-separated stop-sequences editor. Stored as `[String]?` — nil when the
+/// field is blank so the wire encoders omit the key entirely.
+private struct StopSequencesRow: View {
+    @Binding var value: [String]?
+    @State private var text: String = ""
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Stop sequences")
+            TextField("comma-separated · e.g. END,<|stop|>", text: $text)
+                .textFieldStyle(.roundedBorder)
+                .font(.callout.monospaced())
+                .onChange(of: text) { _, newValue in
+                    let parts = newValue
+                        .split(separator: ",")
+                        .map { $0.trimmingCharacters(in: .whitespaces) }
+                        .filter { !$0.isEmpty }
+                    value = parts.isEmpty ? nil : parts
+                }
+                .onAppear { text = (value ?? []).joined(separator: ", ") }
+            Text("Generation stops when the model emits any of these (Chat Completions `stop` / Anthropic `stop_sequences`).")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+/// Free-form integer seed entry. OptionalIntRow's stepper is unsuitable here —
+/// seeds are arbitrary values you type, not something you nudge by 256.
+private struct SeedRow: View {
+    @Binding var value: Int?
+    @State private var text: String = ""
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text("Seed")
+                Spacer()
+                TextField("none", text: $text)
+                    .textFieldStyle(.roundedBorder)
+                    .font(.callout.monospaced())
+                    .frame(width: 140)
+                    .multilineTextAlignment(.trailing)
+                    .onChange(of: text) { _, newValue in
+                        value = Int(newValue.trimmingCharacters(in: .whitespaces))
+                    }
+                    .onAppear { text = value.map(String.init) ?? "" }
+            }
+            Text("Best-effort deterministic sampling (OpenAI Chat Completions only).")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
         }
     }
 }

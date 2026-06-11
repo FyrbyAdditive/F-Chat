@@ -12,6 +12,15 @@ public struct ChatRequest: Sendable, Hashable {
     public var temperature: Double?
     public var topP: Double?
     public var maxOutputTokens: Int?
+    /// Sequences that stop generation. OpenAI Chat Completions `stop`,
+    /// Anthropic `stop_sequences`; the Responses API has no equivalent.
+    public var stopSequences: [String]?
+    /// OpenAI Chat Completions only; Anthropic/Responses have no equivalent.
+    public var frequencyPenalty: Double?
+    /// OpenAI Chat Completions only; Anthropic/Responses have no equivalent.
+    public var presencePenalty: Double?
+    /// Best-effort deterministic sampling (OpenAI Chat Completions only).
+    public var seed: Int?
     public var reasoningEffort: ReasoningEffort?
     /// Asks the server to stream a summary of the model's chain-of-thought
     /// as `response.reasoning_summary_text.delta` events. Without this set,
@@ -32,6 +41,10 @@ public struct ChatRequest: Sendable, Hashable {
         temperature: Double? = nil,
         topP: Double? = nil,
         maxOutputTokens: Int? = nil,
+        stopSequences: [String]? = nil,
+        frequencyPenalty: Double? = nil,
+        presencePenalty: Double? = nil,
+        seed: Int? = nil,
         reasoningEffort: ReasoningEffort? = nil,
         reasoningSummary: ReasoningSummary? = nil,
         parallelToolCalls: Bool = true,
@@ -47,6 +60,10 @@ public struct ChatRequest: Sendable, Hashable {
         self.temperature = temperature
         self.topP = topP
         self.maxOutputTokens = maxOutputTokens
+        self.stopSequences = stopSequences
+        self.frequencyPenalty = frequencyPenalty
+        self.presencePenalty = presencePenalty
+        self.seed = seed
         self.reasoningEffort = reasoningEffort
         self.reasoningSummary = reasoningSummary
         self.parallelToolCalls = parallelToolCalls
