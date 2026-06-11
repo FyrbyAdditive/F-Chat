@@ -166,14 +166,16 @@ public final class OpenAIChatCompletionsEventDecoder {
     private struct Usage: Decodable {
         let prompt_tokens: Int?
         let completion_tokens: Int?
-        let prompt_tokens_details: Details?
-        struct Details: Decodable { let cached_tokens: Int? }
+        let prompt_tokens_details: PromptDetails?
+        let completion_tokens_details: CompletionDetails?
+        struct PromptDetails: Decodable { let cached_tokens: Int? }
+        struct CompletionDetails: Decodable { let reasoning_tokens: Int? }
 
         func toUsageInfo() -> UsageInfo {
             UsageInfo(
                 inputTokens: prompt_tokens ?? 0,
                 outputTokens: completion_tokens ?? 0,
-                reasoningTokens: nil,
+                reasoningTokens: completion_tokens_details?.reasoning_tokens,
                 cachedInputTokens: prompt_tokens_details?.cached_tokens
             )
         }

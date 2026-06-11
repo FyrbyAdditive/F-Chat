@@ -142,13 +142,17 @@ public struct OpenAIChatCompletionsRequestEncoder {
             ) as? [String: Any] else {
                 throw ProviderError.malformedResponse("invalid tool parameters for \(tool.name)")
             }
+            var function: [String: Any] = [
+                "name": tool.name,
+                "description": tool.description,
+                "parameters": schema,
+            ]
+            // Structured-outputs strict mode. Only sent when enabled so older
+            // OpenAI-compatible gateways that predate the field aren't tripped.
+            if tool.strict { function["strict"] = true }
             return [
                 "type": "function",
-                "function": [
-                    "name": tool.name,
-                    "description": tool.description,
-                    "parameters": schema,
-                ],
+                "function": function,
             ]
         }
     }

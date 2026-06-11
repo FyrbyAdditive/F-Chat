@@ -62,7 +62,20 @@ struct OpenAIChatCompletionsRequestEncoderTests {
         let fn = try #require(tools[0]["function"] as? [String: Any])
         #expect(fn["name"] as? String == "get_time")
         #expect(fn["parameters"] is [String: Any])
+        // Non-strict tools omit the field entirely (older gateways).
+        #expect(fn["strict"] == nil)
         #expect(json["tool_choice"] as? String == "required")
+    }
+
+    @Test func strictToolEncodesStrictFlag() throws {
+        let req = ChatRequest(
+            model: "m",
+            input: [.message(role: .user, content: [.inputText("hi")])],
+            tools: [ToolDefinition(name: "lookup", description: "d", parametersSchema: .emptyObject, strict: true)]
+        )
+        let json = try object(try encoder.encode(req, stream: true))
+        let fn = try #require((json["tools"] as? [[String: Any]])?.first?["function"] as? [String: Any])
+        #expect(fn["strict"] as? Bool == true)
     }
 
     @Test func toolCallAndResultRoundTrip() throws {
@@ -238,5 +251,15 @@ struct OpenAIChatCompletionsEventDecoderTests {
         guard case .usage(let info) = u.first else { Issue.record("expected usage, got \(u)"); return }
         #expect(info.inputTokens == 12)
         #expect(info.outputTokens == 7)
+        #expect(info.reasoningTokens == nil)
+    }
+
+    @Test func usageChunkCarriesReasoningTokens() throws {
+        let d = OpenAIChatCompletionsEventDecoder()
+        _ = try d.decode(sse(#"{"id":"c","choices":[{"delta":{"role":"assistant"}}]}"#))
+        let u = try d.decode(sse(#"{"id":"c","choices":[],"usage":{"prompt_tokens":12,"completion_tokens":40,"completion_tokens_details":{"reasoning_tokens":33},"prompt_tokens_details":{"cached_tokens":8}}}"#))
+        guard case .usage(let info) = u.first else { Issue.record("expected usage, got \(u)"); return }
+        #expect(info.reasoningTokens == 33)
+        #expect(info.cachedInputTokens == 8)
     }
 }
