@@ -105,11 +105,24 @@ struct OpenAIChatCompletionsEventDecoderTests {
     @Test func firstChunkStartsThenContentDeltas() throws {
         let d = OpenAIChatCompletionsEventDecoder()
         let started = try d.decode(sse(#"{"id":"chatcmpl_1","choices":[{"delta":{"role":"assistant"}}]}"#))
-        guard case .responseStarted(let id) = started else { Issue.record("expected started"); return }
+        guard case .responseStarted(let id) = started.first else { Issue.record("expected started"); return }
         #expect(id == "chatcmpl_1")
+        #expect(started.count == 1)
 
         let delta = try d.decode(sse(#"{"id":"chatcmpl_1","choices":[{"delta":{"content":"Hel"}}]}"#))
-        guard case .textDelta(_, let t) = delta else { Issue.record("expected textDelta"); return }
+        guard case .textDelta(_, let t) = delta.first else { Issue.record("expected textDelta"); return }
+        #expect(t == "Hel")
+    }
+
+    @Test func openerContentEmitsStartedAndDelta() throws {
+        // A first chunk that carries content yields responseStarted *and* the
+        // text delta (the old contract accumulated it silently).
+        let d = OpenAIChatCompletionsEventDecoder()
+        let events = try d.decode(sse(#"{"id":"c","choices":[{"delta":{"content":"Hel"}}]}"#))
+        guard case .responseStarted = events.first else { Issue.record("expected started first"); return }
+        guard events.count == 2, case .textDelta(_, let t) = events[1] else {
+            Issue.record("expected textDelta second, got \(events)"); return
+        }
         #expect(t == "Hel")
     }
 
@@ -120,7 +133,7 @@ struct OpenAIChatCompletionsEventDecoderTests {
         _ = try d.decode(sse(#"{"id":"c","choices":[{"delta":{"content":"Hel"}}]}"#))
         _ = try d.decode(sse(#"{"id":"c","choices":[{"delta":{"content":"lo"}}]}"#))
         let done = try d.decode(sse(#"{"id":"c","choices":[{"delta":{},"finish_reason":"stop"}]}"#))
-        guard case .textCompleted(_, let full) = done else { Issue.record("expected textCompleted, got \(String(describing: done))"); return }
+        guard case .textCompleted(_, let full) = done.first else { Issue.record("expected textCompleted, got \(done)"); return }
         #expect(full == "Hello")
     }
 
@@ -130,7 +143,7 @@ struct OpenAIChatCompletionsEventDecoderTests {
         _ = try d.decode(sse(#"{"id":"c","choices":[{"delta":{"content":"Hel"}}]}"#))
         _ = try d.decode(sse(#"{"id":"c","choices":[{"delta":{"content":"lo"}}]}"#))
         let done = try d.decode(sse(#"{"id":"c","choices":[{"finish_reason":"stop"}]}"#))
-        guard case .textCompleted(_, let full) = done else { Issue.record("expected textCompleted"); return }
+        guard case .textCompleted(_, let full) = done.first else { Issue.record("expected textCompleted"); return }
         #expect(full == "Hello")
     }
 
@@ -138,7 +151,7 @@ struct OpenAIChatCompletionsEventDecoderTests {
         let d = OpenAIChatCompletionsEventDecoder()
         _ = try d.decode(sse(#"{"id":"c","choices":[{"delta":{"role":"assistant"}}]}"#))
         let r = try d.decode(sse(#"{"id":"c","choices":[{"delta":{"reasoning_content":"think"}}]}"#))
-        guard case .reasoningSummaryDelta(_, let t) = r else { Issue.record("expected reasoning"); return }
+        guard case .reasoningSummaryDelta(_, let t) = r.first else { Issue.record("expected reasoning"); return }
         #expect(t == "think")
     }
 
@@ -148,7 +161,7 @@ struct OpenAIChatCompletionsEventDecoderTests {
         let d = OpenAIChatCompletionsEventDecoder()
         _ = try d.decode(sse(#"{"id":"c","choices":[{"delta":{"role":"assistant","content":""}}]}"#))
         let r = try d.decode(sse(#"{"id":"c","choices":[{"delta":{"content":null,"reasoning":"The user"}}]}"#))
-        guard case .reasoningSummaryDelta(_, let t) = r else { Issue.record("expected reasoning, got \(String(describing: r))"); return }
+        guard case .reasoningSummaryDelta(_, let t) = r.first else { Issue.record("expected reasoning, got \(r)"); return }
         #expect(t == "The user")
     }
 
@@ -156,23 +169,73 @@ struct OpenAIChatCompletionsEventDecoderTests {
         let d = OpenAIChatCompletionsEventDecoder()
         _ = try d.decode(sse(#"{"id":"c","choices":[{"delta":{"role":"assistant"}}]}"#))
         let started = try d.decode(sse(#"{"id":"c","choices":[{"delta":{"tool_calls":[{"index":0,"id":"call_1","type":"function","function":{"name":"get_time","arguments":""}}]}}]}"#))
-        guard case .toolCallStarted(_, let cid, let name) = started else { Issue.record("expected toolCallStarted"); return }
+        guard case .toolCallStarted(_, let cid, let name) = started.first else { Issue.record("expected toolCallStarted"); return }
         #expect(cid == "call_1"); #expect(name == "get_time")
+        // Empty arguments fragment on the started chunk → no trailing delta event.
+        #expect(started.count == 1)
 
         let argsDelta = try d.decode(sse(#"{"id":"c","choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"x\":1}"}}]}}]}"#))
-        guard case .toolCallArgumentsDelta(_, _, let dArgs) = argsDelta else { Issue.record("expected argsDelta"); return }
+        guard case .toolCallArgumentsDelta(_, _, let dArgs) = argsDelta.first else { Issue.record("expected argsDelta"); return }
         #expect(dArgs == "{\"x\":1}")
 
         let done = try d.decode(sse(#"{"id":"c","choices":[{"delta":{},"finish_reason":"tool_calls"}]}"#))
-        guard case .toolCallCompleted(_, let cid2, let name2, let args) = done else { Issue.record("expected toolCallCompleted"); return }
+        guard case .toolCallCompleted(_, let cid2, let name2, let args) = done.first else { Issue.record("expected toolCallCompleted"); return }
         #expect(cid2 == "call_1"); #expect(name2 == "get_time"); #expect(args == "{\"x\":1}")
+    }
+
+    @Test func parallelToolCallsAllComplete() throws {
+        // Two calls streamed in parallel (interleaved fragments, distinct
+        // `index`). Regression: the old one-event contract completed only the
+        // first call and swallowed the second call's first args fragment.
+        let d = OpenAIChatCompletionsEventDecoder()
+        _ = try d.decode(sse(#"{"id":"c","choices":[{"delta":{"role":"assistant"}}]}"#))
+
+        let s0 = try d.decode(sse(#"{"id":"c","choices":[{"delta":{"tool_calls":[{"index":0,"id":"call_a","type":"function","function":{"name":"get_time","arguments":"{\"tz\":"}}]}}]}"#))
+        guard case .toolCallStarted(_, "call_a", "get_time") = s0.first else { Issue.record("expected call_a started"); return }
+        // The same-chunk fragment must surface as a delta, not vanish.
+        guard s0.count == 2, case .toolCallArgumentsDelta(_, "call_a", "{\"tz\":") = s0[1] else {
+            Issue.record("expected call_a same-chunk args delta, got \(s0)"); return
+        }
+
+        let s1 = try d.decode(sse(#"{"id":"c","choices":[{"delta":{"tool_calls":[{"index":1,"id":"call_b","type":"function","function":{"name":"get_weather","arguments":"{\"city\":"}}]}}]}"#))
+        guard case .toolCallStarted(_, "call_b", "get_weather") = s1.first else { Issue.record("expected call_b started"); return }
+        guard s1.count == 2, case .toolCallArgumentsDelta(_, "call_b", "{\"city\":") = s1[1] else {
+            Issue.record("expected call_b same-chunk args delta, got \(s1)"); return
+        }
+
+        _ = try d.decode(sse(#"{"id":"c","choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\"UTC\"}"}}]}}]}"#))
+        _ = try d.decode(sse(#"{"id":"c","choices":[{"delta":{"tool_calls":[{"index":1,"function":{"arguments":"\"Oslo\"}"}}]}}]}"#))
+
+        let done = try d.decode(sse(#"{"id":"c","choices":[{"delta":{},"finish_reason":"tool_calls"}]}"#))
+        #expect(done.count == 2)
+        guard case .toolCallCompleted(_, "call_a", "get_time", let argsA) = done[0] else {
+            Issue.record("expected call_a completed first, got \(done)"); return
+        }
+        guard case .toolCallCompleted(_, "call_b", "get_weather", let argsB) = done[1] else {
+            Issue.record("expected call_b completed second, got \(done)"); return
+        }
+        #expect(argsA == "{\"tz\":\"UTC\"}")
+        #expect(argsB == "{\"city\":\"Oslo\"}")
+    }
+
+    @Test func textAndToolCallsBothCompleteOnFinish() throws {
+        // A turn that streams text *and* calls a tool: the finish marker must
+        // complete the text first, then the tool call.
+        let d = OpenAIChatCompletionsEventDecoder()
+        _ = try d.decode(sse(#"{"id":"c","choices":[{"delta":{"role":"assistant"}}]}"#))
+        _ = try d.decode(sse(#"{"id":"c","choices":[{"delta":{"content":"Checking…"}}]}"#))
+        _ = try d.decode(sse(#"{"id":"c","choices":[{"delta":{"tool_calls":[{"index":0,"id":"call_1","type":"function","function":{"name":"now","arguments":""}}]}}]}"#))
+        let done = try d.decode(sse(#"{"id":"c","choices":[{"delta":{},"finish_reason":"tool_calls"}]}"#))
+        #expect(done.count == 2)
+        guard case .textCompleted(_, "Checking…") = done[0] else { Issue.record("expected textCompleted first, got \(done)"); return }
+        guard case .toolCallCompleted(_, "call_1", "now", "{}") = done[1] else { Issue.record("expected toolCallCompleted second, got \(done)"); return }
     }
 
     @Test func usageChunk() throws {
         let d = OpenAIChatCompletionsEventDecoder()
         _ = try d.decode(sse(#"{"id":"c","choices":[{"delta":{"role":"assistant"}}]}"#))
         let u = try d.decode(sse(#"{"id":"c","choices":[],"usage":{"prompt_tokens":12,"completion_tokens":7}}"#))
-        guard case .usage(let info) = u else { Issue.record("expected usage, got \(String(describing: u))"); return }
+        guard case .usage(let info) = u.first else { Issue.record("expected usage, got \(u)"); return }
         #expect(info.inputTokens == 12)
         #expect(info.outputTokens == 7)
     }

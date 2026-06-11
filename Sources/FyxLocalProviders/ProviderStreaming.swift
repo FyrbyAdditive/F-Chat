@@ -59,13 +59,16 @@ enum ProviderHTTP {
 ///   the keychain, headers, JSON body) — it's `async` because auth reads the
 ///   keychain.
 /// - `makeDecode` builds the per-stream, stateful (non-`Sendable`) event
-///   decoder; it stays task-local.
+///   decoder; it stays task-local. A decoder returns *all* events a frame
+///   yields, in order — most frames carry one signal, but Chat Completions
+///   chunks can carry several (e.g. a finish marker completing text *and*
+///   multiple parallel tool calls at once).
 /// - `isDone` lets a provider terminate early on a sentinel frame (OpenAI's
 ///   `[DONE]`); the default never matches (Anthropic ends on `message_stop`).
 func streamSSE(
     session: URLSession,
     makeRequest: @escaping @Sendable () async throws -> URLRequest,
-    makeDecode: @escaping @Sendable () -> (SSEEvent) throws -> StreamEvent?,
+    makeDecode: @escaping @Sendable () -> (SSEEvent) throws -> [StreamEvent],
     isDone: @escaping @Sendable (SSEEvent) -> Bool = { _ in false }
 ) -> AsyncThrowingStream<StreamEvent, Error> {
     AsyncThrowingStream { continuation in
@@ -94,7 +97,7 @@ func streamSSE(
 private func runSSEStream(
     request: URLRequest,
     session: URLSession,
-    decode: (SSEEvent) throws -> StreamEvent?,
+    decode: (SSEEvent) throws -> [StreamEvent],
     isDone: (SSEEvent) -> Bool,
     into continuation: AsyncThrowingStream<StreamEvent, Error>.Continuation
 ) async throws {
@@ -123,7 +126,7 @@ private func runSSEStream(
     func handle(_ sse: SSEEvent) -> Bool {
         if isDone(sse) { return true }
         do {
-            if let event = try decode(sse) {
+            for event in try decode(sse) {
                 continuation.yield(event)
                 yieldedAny = true
             }

@@ -31,9 +31,9 @@ struct StreamResilienceTests {
             makeDecode: {
                 { sse in
                     let d = sse.data
-                    if d.isEmpty { return nil }
+                    if d.isEmpty { return [] }
                     if d == "BOOM" { throw StreamStubError.boom }
-                    return .textDelta(itemID: "x", delta: d)
+                    return [.textDelta(itemID: "x", delta: d)]
                 }
             },
             isDone: { $0.data == "[DONE]" }

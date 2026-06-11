@@ -94,8 +94,10 @@ public struct OpenAIResponsesProvider: LLMProvider {
             session: session,
             makeRequest: { try await self.makeStreamRequest(request) },
             makeDecode: {
+                // The Responses wire is genuinely one-event-per-frame; adapt to
+                // the streamer's multi-event contract.
                 let decoder = OpenAIResponsesEventDecoder()
-                return { try decoder.decode($0) }
+                return { try decoder.decode($0).map { [$0] } ?? [] }
             },
             isDone: { $0.data == "[DONE]" }
         )

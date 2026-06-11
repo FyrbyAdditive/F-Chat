@@ -110,8 +110,10 @@ public struct AnthropicMessagesProvider: LLMProvider {
             session: session,
             makeRequest: { try await self.makeStreamRequest(request) },
             makeDecode: {
+                // The Anthropic wire is genuinely one-event-per-frame; adapt to
+                // the streamer's multi-event contract.
                 let decoder = AnthropicMessagesEventDecoder()
-                return { try decoder.decode($0) }
+                return { try decoder.decode($0).map { [$0] } ?? [] }
             }
         )
     }
