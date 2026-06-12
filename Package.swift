@@ -55,6 +55,10 @@ let package = Package(
             dependencies: [
                 // ZIP reader for importing `.zip`-packaged Agent Skills.
                 .product(name: "ZIPFoundation", package: "ZIPFoundation"),
+                // CommonMark+GFM parser for the high-fidelity .docx export
+                // (markdown → real Word formatting). Same package the app
+                // target already pins for transcript rendering.
+                .product(name: "Markdown", package: "swift-markdown"),
             ],
             resources: [
                 .copy("Tokenization/Resources/cl100k_base.tiktoken"),

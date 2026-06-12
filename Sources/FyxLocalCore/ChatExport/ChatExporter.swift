@@ -164,23 +164,38 @@ public enum ChatExporter {
     // MARK: - Word (.docx)
 
     public static func docx(_ c: Conversation) throws -> Data {
-        var paragraphs: [DocxWriter.Paragraph] = []
-        paragraphs.append(DocxWriter.Paragraph([DocxWriter.Run(text: c.title, bold: true)]))
-        paragraphs.append(.blank)
+        var blocks: [DocxWriter.Block] = []
+        blocks.append(.paragraph(DocxWriter.Paragraph([DocxWriter.Run(text: c.title)], style: .title)))
         for turn in turns(of: c) {
-            paragraphs.append(DocxWriter.Paragraph([DocxWriter.Run(text: turn.roleLabel, bold: true)]))
-            paragraphs.append(DocxWriter.Paragraph([
+            blocks.append(.paragraph(DocxWriter.Paragraph([DocxWriter.Run(text: turn.roleLabel, bold: true)])))
+            blocks.append(.paragraph(DocxWriter.Paragraph([
                 DocxWriter.Run(text: timestampString(turn.timestamp), italic: true)
-            ]))
+            ])))
             for seg in turn.segments {
                 if seg.isReasoning {
-                    paragraphs.append(DocxWriter.Paragraph([DocxWriter.Run(text: "Reasoning", italic: true)]))
+                    blocks.append(.paragraph(DocxWriter.Paragraph(
+                        [DocxWriter.Run(text: "Reasoning", italic: true)]
+                    )))
+                    // Reasoning renders with full markdown fidelity too, but
+                    // quoted so it reads as an aside; block-level structure
+                    // inside (headings/lists) keeps its own styling.
+                    for block in MarkdownDocxRenderer.blocks(from: seg.text) {
+                        if case .paragraph(var p) = block, p.style == .body {
+                            p.style = .quote
+                            blocks.append(.paragraph(p))
+                        } else {
+                            blocks.append(block)
+                        }
+                    }
+                } else {
+                    // The fidelity fix: parse the markdown instead of pasting
+                    // it literally into a single plain paragraph.
+                    blocks.append(contentsOf: MarkdownDocxRenderer.blocks(from: seg.text))
                 }
-                paragraphs.append(.plain(seg.text))
             }
-            paragraphs.append(.blank)
+            blocks.append(.blank)
         }
-        return try DocxWriter.build(paragraphs: paragraphs)
+        return try DocxWriter.build(blocks: blocks)
     }
 
     // MARK: - Zip bundle (one file per chat)

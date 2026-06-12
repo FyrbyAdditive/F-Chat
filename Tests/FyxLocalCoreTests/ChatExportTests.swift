@@ -101,7 +101,11 @@ struct ChatExportTests {
         var xml = Data()
         _ = try archive.extract(docEntry) { xml.append($0) }
         let text = String(decoding: xml, as: UTF8.self)
-        #expect(text.contains("5 &lt; 6 &amp; &quot;quote&quot; &gt; 3"))
+        // The body now flows through the markdown renderer, which
+        // smart-quotes plain `"` to curly `“ ”` (no escaping needed); the
+        // XML-significant characters must still be escaped.
+        #expect(text.contains("5 &lt; 6 &amp; “quote” &gt; 3"))
+        #expect(!text.contains("5 < 6"))
     }
 
     @Test func multiChatExportProducesZipWithOneFilePerChat() throws {
