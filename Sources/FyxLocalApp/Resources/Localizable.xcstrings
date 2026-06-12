@@ -10536,41 +10536,6 @@
         }
       }
     },
-    "none": {
-      "extractionState": "manual",
-      "localizations": {
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ingen"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "none"
-          }
-        },
-        "en-GB": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "none"
-          }
-        },
-        "nb": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ingen"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ingen"
-          }
-        }
-      }
-    },
     "optional": {
       "extractionState": "manual",
       "localizations": {

@@ -913,7 +913,7 @@ private struct SeedRow: View {
             HStack {
                 Text("Seed")
                 Spacer()
-                TextField("none", text: $text)
+                TextField("server default", text: $text)
                     .textFieldStyle(.roundedBorder)
                     .font(.callout.monospaced())
                     .frame(width: 140)
