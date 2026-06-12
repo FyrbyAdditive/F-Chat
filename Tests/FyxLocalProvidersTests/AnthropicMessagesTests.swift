@@ -436,13 +436,15 @@ struct ProviderRecordAPIKindTests {
     }
 
     @Test func samplingApplicabilityMatchesWireSupport() {
-        // Penalties + seed: OpenAI Chat Completions only.
+        // Penalties + seed: OpenAI Chat Completions, and Ollama via options.
         #expect(LLMAPIKind.openAIChatCompletions.supportsPenaltiesAndSeed)
+        #expect(LLMAPIKind.ollama.supportsPenaltiesAndSeed)
         #expect(!LLMAPIKind.openAIResponses.supportsPenaltiesAndSeed)
         #expect(!LLMAPIKind.anthropicMessages.supportsPenaltiesAndSeed)
         // Stop sequences: everything except OpenAI Responses.
         #expect(LLMAPIKind.openAIChatCompletions.supportsStopSequences)
         #expect(LLMAPIKind.anthropicMessages.supportsStopSequences)
+        #expect(LLMAPIKind.ollama.supportsStopSequences)
         #expect(!LLMAPIKind.openAIResponses.supportsStopSequences)
     }
 
@@ -451,6 +453,8 @@ struct ProviderRecordAPIKindTests {
         #expect(LLMAPIKind.openAIResponses.defaultBaseURL == "https://")
         #expect(LLMAPIKind.openAIChatCompletions.defaultBaseURL == "https://")
         #expect(LLMAPIKind.openAIChatCompletions.displayName == "OpenAI (Chat Completions)")
-        #expect(LLMAPIKind.allCases.count == 3)
+        #expect(LLMAPIKind.ollama.defaultBaseURL == "http://localhost:11434")
+        #expect(LLMAPIKind.ollama.displayName == "Ollama")
+        #expect(LLMAPIKind.allCases.count == 4)
     }
 }

@@ -664,7 +664,8 @@ final class ChatViewModel {
                         todayHeader: todayHeader,
                         includeImages: acceptsImages
                     ),
-                    tools: toolDefinitions
+                    tools: toolDefinitions,
+                    contextWindow: budget.effectiveWindow
                 )
                 await cacheContextSize(messageID: userMessageID, tokens: projectedTotal)
                 return request
@@ -721,7 +722,8 @@ final class ChatViewModel {
             sampling: providerRecord.sampling,
             instructions: instructions,
             inputs: inputs,
-            tools: toolDefinitions
+            tools: toolDefinitions,
+            contextWindow: budget.effectiveWindow
         )
     }
 
@@ -730,7 +732,8 @@ final class ChatViewModel {
         sampling: ProviderSamplingDefaults,
         instructions: String,
         inputs: [InputItem],
-        tools: [ToolDefinition]
+        tools: [ToolDefinition],
+        contextWindow: Int? = nil
     ) -> ChatRequest {
         ChatRequest(
             model: modelID,
@@ -744,6 +747,9 @@ final class ChatViewModel {
             frequencyPenalty: sampling.frequencyPenalty,
             presencePenalty: sampling.presencePenalty,
             seed: sampling.seed,
+            // Lets the Ollama encoder set options.num_ctx to the window we
+            // budgeted against; other providers ignore it.
+            contextWindowHint: contextWindow,
             reasoningEffort: conversation.reasoningEffort,
             // Ask the server to stream a chain-of-thought summary so the
             // user sees what the model is thinking. Without this vLLM /

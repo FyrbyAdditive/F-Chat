@@ -111,6 +111,92 @@ func streamSSE(
     }
 }
 
+/// Drive a streaming NDJSON chat request end to end — the newline-delimited-
+/// JSON sibling of `streamSSE`, with identical semantics (single task,
+/// per-line decode returning all events, malformed-line skip, "no usable
+/// event" terminal error, cancellation via onTermination). Used by Ollama's
+/// native API, which streams one JSON object per line and ends with a
+/// `"done":true` object followed by EOF — there is no SSE framing and no
+/// `[DONE]` sentinel.
+func streamNDJSON(
+    session: URLSession,
+    makeRequest: @escaping @Sendable () async throws -> URLRequest,
+    makeDecode: @escaping @Sendable () -> (String) throws -> [StreamEvent]
+) -> AsyncThrowingStream<StreamEvent, Error> {
+    AsyncThrowingStream { continuation in
+        let task = Task {
+            do {
+                let request = try await makeRequest()
+                let decode = makeDecode()
+                try await runNDJSONStream(
+                    request: request,
+                    session: session,
+                    decode: decode,
+                    into: continuation
+                )
+                continuation.finish()
+            } catch is CancellationError {
+                continuation.finish()
+            } catch {
+                continuation.finish(throwing: error)
+            }
+        }
+        continuation.onTermination = { _ in task.cancel() }
+    }
+}
+
+private func runNDJSONStream(
+    request: URLRequest,
+    session: URLSession,
+    decode: (String) throws -> [StreamEvent],
+    into continuation: AsyncThrowingStream<StreamEvent, Error>.Continuation
+) async throws {
+    let (bytes, response) = try await session.bytes(for: request)
+    if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+        var lines: [String] = []
+        for try await line in bytes.lines { lines.append(line) }
+        throw ProviderError.httpStatus(http.statusCode, body: lines.joined(separator: "\n"))
+    }
+
+    var lineBuffer: [UInt8] = []
+    var yieldedAny = false
+
+    // Decode one NDJSON line, tolerating a single malformed line: log + skip
+    // and keep the stream alive rather than failing the whole turn.
+    func handle(_ line: String) {
+        let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        do {
+            for event in try decode(trimmed) {
+                continuation.yield(event)
+                yieldedAny = true
+            }
+        } catch {
+            FileHandle.standardError.write(Data("[FyxLocal] skipped malformed NDJSON line: \(error)\n".utf8))
+        }
+    }
+
+    // Drain raw bytes and flush a line to the decoder the instant its "\n"
+    // arrives — same real-time rationale as runSSEStream (`.lines` buffers).
+    for try await byte in bytes {
+        try Task.checkCancellation()
+        lineBuffer.append(byte)
+        if byte == UInt8(ascii: "\n") {
+            if let line = String(bytes: lineBuffer, encoding: .utf8) {
+                lineBuffer.removeAll(keepingCapacity: true)
+                handle(line)
+            }
+        }
+    }
+    if !lineBuffer.isEmpty, let line = String(bytes: lineBuffer, encoding: .utf8) {
+        handle(line)
+    }
+    if !yieldedAny {
+        continuation.yield(.responseError(message: "The provider returned no readable response.", code: nil))
+    }
+    continuation.yield(.completed)
+}
+
 private func runSSEStream(
     request: URLRequest,
     session: URLSession,

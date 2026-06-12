@@ -15,12 +15,19 @@ public enum LLMAPIKind: String, Sendable, Hashable, Codable, CaseIterable {
     case openAIChatCompletions = "openai-chat-completions"
     /// Anthropic Messages API (`/messages`, SSE, `x-api-key` auth).
     case anthropicMessages = "anthropic-messages"
+    /// Ollama native API (`/api/chat`, NDJSON streaming, no API key). Distinct
+    /// from Ollama's OpenAI-compat shim: exposes per-model capabilities and
+    /// context length via `/api/show`, native thinking deltas, and the
+    /// `options` block (num_ctx in particular — without it Ollama truncates
+    /// at its small server default regardless of the model's maximum).
+    case ollama = "ollama"
 
     public var displayName: String {
         switch self {
         case .openAIResponses: return "OpenAI (Responses)"
         case .openAIChatCompletions: return "OpenAI (Chat Completions)"
         case .anthropicMessages: return "Anthropic (Messages)"
+        case .ollama: return "Ollama"
         }
     }
 
@@ -31,6 +38,9 @@ public enum LLMAPIKind: String, Sendable, Hashable, Codable, CaseIterable {
         switch self {
         case .openAIResponses, .openAIChatCompletions: return "https://"
         case .anthropicMessages: return "https://api.anthropic.com/v1"
+        // Host root; the provider appends `api/chat`, `api/tags`, etc.
+        // Loopback http is exempt from App Transport Security.
+        case .ollama: return "http://localhost:11434"
         }
     }
 
@@ -45,15 +55,18 @@ public enum LLMAPIKind: String, Sendable, Hashable, Codable, CaseIterable {
     /// `stop` / `stop_sequences`. The OpenAI Responses API has no equivalent.
     public var supportsStopSequences: Bool {
         switch self {
-        case .openAIChatCompletions, .anthropicMessages: return true
+        case .openAIChatCompletions, .anthropicMessages, .ollama: return true
         case .openAIResponses: return false
         }
     }
 
     /// `frequency_penalty` / `presence_penalty` / `seed` — OpenAI Chat
-    /// Completions only.
+    /// Completions, and Ollama via its `options` block.
     public var supportsPenaltiesAndSeed: Bool {
-        self == .openAIChatCompletions
+        switch self {
+        case .openAIChatCompletions, .ollama: return true
+        case .openAIResponses, .anthropicMessages: return false
+        }
     }
 }
 

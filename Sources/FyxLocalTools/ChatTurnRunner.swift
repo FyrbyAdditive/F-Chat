@@ -193,6 +193,7 @@ public struct ChatTurnRunner: Sendable {
                 frequencyPenalty: initial.frequencyPenalty,
                 presencePenalty: initial.presencePenalty,
                 seed: initial.seed,
+                contextWindowHint: initial.contextWindowHint,
                 reasoningEffort: initial.reasoningEffort,
                 parallelToolCalls: initial.parallelToolCalls,
                 tools: initial.tools,

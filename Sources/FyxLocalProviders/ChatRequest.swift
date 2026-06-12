@@ -21,6 +21,13 @@ public struct ChatRequest: Sendable, Hashable {
     public var presencePenalty: Double?
     /// Best-effort deterministic sampling (OpenAI Chat Completions only).
     public var seed: Int?
+    /// The effective context window the app budgeted this request against
+    /// (`ContextBudget.effectiveWindow`). Only the Ollama encoder consumes it
+    /// (as `options.num_ctx`): Ollama serves a small default context
+    /// regardless of the model's maximum unless the request asks for more,
+    /// which would silently truncate long chats our budget believes fit.
+    /// Hosted APIs ignore it — their serving window isn't per-request.
+    public var contextWindowHint: Int?
     public var reasoningEffort: ReasoningEffort?
     /// Asks the server to stream a summary of the model's chain-of-thought
     /// as `response.reasoning_summary_text.delta` events. Without this set,
@@ -45,6 +52,7 @@ public struct ChatRequest: Sendable, Hashable {
         frequencyPenalty: Double? = nil,
         presencePenalty: Double? = nil,
         seed: Int? = nil,
+        contextWindowHint: Int? = nil,
         reasoningEffort: ReasoningEffort? = nil,
         reasoningSummary: ReasoningSummary? = nil,
         parallelToolCalls: Bool = true,
@@ -64,6 +72,7 @@ public struct ChatRequest: Sendable, Hashable {
         self.frequencyPenalty = frequencyPenalty
         self.presencePenalty = presencePenalty
         self.seed = seed
+        self.contextWindowHint = contextWindowHint
         self.reasoningEffort = reasoningEffort
         self.reasoningSummary = reasoningSummary
         self.parallelToolCalls = parallelToolCalls

@@ -389,6 +389,13 @@ final class AppEnvironment {
                 session: session,
                 secretStore: secretStore
             )
+        case .ollama:
+            return OllamaProvider(
+                id: record.id,
+                baseURL: record.baseURL,
+                session: session,
+                secretStore: secretStore
+            )
         }
     }
 
