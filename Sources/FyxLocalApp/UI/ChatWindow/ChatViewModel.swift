@@ -69,7 +69,7 @@ final class ChatViewModel {
         // already has assistant content, the titler has already had its
         // chance (or the user manually set the name).
         let hasAssistantReply = conversation.messages.contains { $0.role == .assistant && !$0.contentItems.isEmpty }
-        if conversation.title != "New chat" || hasAssistantReply {
+        if !AppEnvironment.isDefaultChatTitle(conversation.title) || hasAssistantReply {
             self.didAutoTitle = true
         }
         // Kick the first projection so the meter has a value at view open.
@@ -375,7 +375,7 @@ final class ChatViewModel {
     /// a detached task so a slow titler doesn't keep the streamTask alive.
     private func maybeAutoTitle(providerRecord: ProviderRecord, modelID: String, language: PromptLanguage) {
         guard !didAutoTitle else { return }
-        guard conversation.title == "New chat" else { return }
+        guard AppEnvironment.isDefaultChatTitle(conversation.title) else { return }
         guard let firstUser = conversation.messages.first(where: { $0.role == .user })?.plainText,
               !firstUser.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               let firstAssistant = conversation.messages.first(where: { $0.role == .assistant })?.plainText,
@@ -393,7 +393,7 @@ final class ChatViewModel {
                 await MainActor.run {
                     guard let self else { return }
                     // Recheck the guard — user may have renamed during the LLM call.
-                    guard self.conversation.title == "New chat" else { return }
+                    guard AppEnvironment.isDefaultChatTitle(self.conversation.title) else { return }
                     self.conversation.title = title
                 }
             } catch {

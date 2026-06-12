@@ -133,7 +133,7 @@ struct SidebarView: View {
             }
             ToolbarItem(placement: .primaryAction) {
                 Button {
-                    environment.newConversation(title: "New chat")
+                    environment.newConversation()
                 } label: {
                     Label("New chat", systemImage: "plus")
                 }

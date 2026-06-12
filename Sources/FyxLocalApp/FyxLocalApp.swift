@@ -40,7 +40,7 @@ struct FyxLocalApp: App {
         .commands {
             CommandGroup(replacing: .newItem) {
                 Button("New chat") {
-                    environment.newConversation(title: "New chat")
+                    environment.newConversation()
                 }
                 .keyboardShortcut("n", modifiers: [.command])
                 Divider()

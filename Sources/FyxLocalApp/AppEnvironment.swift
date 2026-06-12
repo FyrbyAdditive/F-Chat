@@ -889,7 +889,29 @@ final class AppEnvironment {
         conversations.reduce(0) { $0 + ($1.settings.enabledSkills.contains(id) ? 1 : 0) }
     }
 
-    func newConversation(title: String) {
+    /// The localised default title a brand-new chat starts with — replaced by
+    /// the auto-titler after the first reply. Localised so a Norwegian user
+    /// sees "Ny chat" in the sidebar, not English.
+    nonisolated static var defaultChatTitle: String {
+        String(localized: "New chat", bundle: .module)
+    }
+
+    /// Whether `title` is the untouched default in ANY of the app's
+    /// languages. The auto-titler only replaces default titles, and a chat
+    /// can outlive a system-language switch — so the sentinel must match
+    /// every localisation, not just the current one. Kept honest by a test
+    /// that walks the string catalog.
+    nonisolated static let knownDefaultChatTitles: Set<String> = [
+        "New chat",   // en, en-GB
+        "Ny chatt",   // sv
+        "Ny chat",    // da, nb
+    ]
+
+    nonisolated static func isDefaultChatTitle(_ title: String) -> Bool {
+        knownDefaultChatTitles.contains(title)
+    }
+
+    func newConversation(title: String = AppEnvironment.defaultChatTitle) {
         guard let provider = currentProvider() else { return }
         let model = provider.defaultModel
             ?? detectedModels[provider.id]?.first?.id

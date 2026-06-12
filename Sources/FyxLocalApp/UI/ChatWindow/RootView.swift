@@ -28,7 +28,7 @@ struct RootView: View {
         }
         .task {
             if environment.conversations.isEmpty {
-                environment.newConversation(title: "New chat")
+                environment.newConversation()
             }
             await environment.registerBuiltInTools()
             // Warm the tokenizer cache for any model the user has configured

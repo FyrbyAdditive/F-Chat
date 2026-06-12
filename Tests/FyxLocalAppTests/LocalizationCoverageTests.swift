@@ -3,6 +3,7 @@
 
 import Testing
 import Foundation
+@testable import FyxLocalApp
 
 /// Structural guard for the FyxLocalApp Localizable.xcstrings catalog: every
 /// key must carry `en`, `sv`, and `da` localizations in `translated` state.
@@ -51,6 +52,31 @@ struct LocalizationCoverageTests {
         }
 
         #expect(strings.count > 0, "catalog had zero keys")
+    }
+
+    /// Every localisation of the "New chat" key must be in the auto-titler's
+    /// sentinel set — the titler only replaces default titles, and a chat can
+    /// outlive a system-language switch, so the set has to cover all
+    /// languages. Keeps `AppEnvironment.knownDefaultChatTitles` honest as new
+    /// languages are added.
+    @Test func defaultChatTitleSentinelCoversEveryLanguage() throws {
+        let data = try Data(contentsOf: catalogURL())
+        let root = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        let strings = root?["strings"] as? [String: [String: Any]]
+        let localizations = try #require(
+            strings?["New chat"]?["localizations"] as? [String: [String: Any]],
+            "catalog has no 'New chat' key"
+        )
+        for (lang, loc) in localizations {
+            let value = try #require(
+                (loc["stringUnit"] as? [String: Any])?["value"] as? String,
+                "no value for New chat [\(lang)]"
+            )
+            #expect(
+                AppEnvironment.isDefaultChatTitle(value),
+                "knownDefaultChatTitles is missing the \(lang) default title \(value)"
+            )
+        }
     }
 
     /// Source-tree path to the catalog. SwiftPM's resource processing splits
