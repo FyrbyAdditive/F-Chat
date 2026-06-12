@@ -251,6 +251,40 @@ struct OllamaModelListingTests {
     }
 }
 
+// MARK: - Tool-capability resolution (send-path gating)
+
+@Suite("ProviderRecord.supportsTools")
+struct SupportsToolsTests {
+    private let record = ProviderRecord(
+        id: .init(rawValue: "ollama"),
+        displayName: "Ollama",
+        baseURL: URL(string: "http://localhost:11434")!,
+        apiKind: .ollama
+    )
+
+    @Test func detectedCapabilityWins() {
+        let detected = [
+            ModelInfo(id: "gemma3:4b", supportsTools: false),
+            ModelInfo(id: "glm4:latest", supportsTools: true),
+        ]
+        #expect(!record.supportsTools(modelID: "gemma3:4b", detected: detected))
+        #expect(record.supportsTools(modelID: "glm4:latest", detected: detected))
+    }
+
+    @Test func unknownModelAssumedCapable() {
+        // Hosted APIs all support tools; only authoritative capability data
+        // (Ollama /api/show) ever reports false.
+        #expect(record.supportsTools(modelID: "mystery", detected: []))
+    }
+
+    @Test func userOverrideBeatsDetected() {
+        var rec = record
+        rec.modelOverrides = [ModelOverride(modelID: "gemma3:4b", supportsTools: true)]
+        let detected = [ModelInfo(id: "gemma3:4b", supportsTools: false)]
+        #expect(rec.supportsTools(modelID: "gemma3:4b", detected: detected))
+    }
+}
+
 // MARK: - URLProtocol stub (host+path keyed; /api/show keyed by body model)
 
 private final class OllamaStub: URLProtocol, @unchecked Sendable {

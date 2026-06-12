@@ -38,6 +38,14 @@ final class ChatViewModel {
     var budget: ContextBudget?
     /// True while we're running a summarize call as part of compact-then-send.
     var isCompacting: Bool = false
+    /// Informational banner over the composer (not an error): e.g. "this
+    /// model can't use tools". Set on the first send to such a model in this
+    /// chat, cleared on the next send (or when the user dismisses it).
+    var modelNotice: String?
+    /// Models we've already shown the no-tools notice for in this chat —
+    /// session-scoped, so switching models mid-chat re-informs only once per
+    /// model rather than on every turn.
+    private var toolNoticeShownForModels: Set<String> = []
 
     private weak var environment: AppEnvironment?
     private var streamTask: Task<Void, Never>?
@@ -283,11 +291,25 @@ final class ChatViewModel {
 
         isStreaming = true
         firstDeltaAt = nil
+        modelNotice = nil
         var enabledTools = environment.enabledTools
             .union(AppEnvironment.alwaysAvailableTools)
         // Admit run_code only when this chat has ≥1 enabled skill.
         if !enabledSkillRefs.isEmpty {
             enabledTools.insert("run_code")
+        }
+        // A model that can't call tools hard-errors when the request carries
+        // tool definitions (e.g. Ollama: "does not support tools"), so strip
+        // them — and tell the user once per model per chat, since tools
+        // silently not firing would otherwise look like the model ignoring
+        // them. Models switched mid-chat re-evaluate every turn.
+        let modelSupportsTools = providerRecord.supportsTools(
+            modelID: trimmedModel,
+            detected: environment.detectedModels[providerRecord.id] ?? []
+        )
+        if !modelSupportsTools && !toolNoticeShownForModels.contains(trimmedModel) {
+            toolNoticeShownForModels.insert(trimmedModel)
+            modelNotice = String(localized: "\(trimmedModel) doesn't support tool calling — web search and other tools are off for its replies in this chat.")
         }
         // Lazy-connect configured MCP servers on the first send of the
         // session so their tools land in the registry before we read it.
@@ -306,7 +328,9 @@ final class ChatViewModel {
                     let allDefinitions = await registry.definitions(for: promptLanguage)
                     // MCP tools admitted unconditionally; built-ins gated
                     // by the Settings → Tools toggles via enabledTools.
-                    let toolDefinitions = allDefinitions.filter { def in
+                    // A tools-incapable model gets none at all (see the
+                    // modelSupportsTools note above).
+                    let toolDefinitions = !modelSupportsTools ? [] : allDefinitions.filter { def in
                         enabledTools.contains(def.name) || def.name.hasPrefix("mcp__")
                     }
 

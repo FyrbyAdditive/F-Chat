@@ -171,6 +171,18 @@ extension ProviderRecord {
         if let d = detected.first(where: { $0.id == modelID }) { return d.supportsVision }
         return false
     }
+
+    /// Whether `modelID` can call tools: user override → detected capability →
+    /// true. The optimistic default is deliberate — every hosted API supports
+    /// tools and only providers with authoritative capability data (Ollama's
+    /// `/api/show`) ever report false. Sending tools to a model that can't use
+    /// them is a hard server error, so the send path strips them when this
+    /// says no.
+    public func supportsTools(modelID: String, detected: [ModelInfo]) -> Bool {
+        if let o = modelOverride(for: modelID) { return o.supportsTools }
+        if let d = detected.first(where: { $0.id == modelID }) { return d.supportsTools }
+        return true
+    }
 }
 
 /// Auto-compaction knobs per provider.

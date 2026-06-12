@@ -33,7 +33,16 @@ struct ChatDetailView: View {
                     // bleed across chat switches.
                     .id(conversationID)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    // The model notice is a fixed-height strip pinned to the
+                    // composer, NOT a flexible sibling of the transcript in
+                    // this VStack — a Spacer-bearing sibling next to the
+                    // `maxHeight: .infinity` transcript disrupted the height
+                    // negotiation and pushed the toolbar/composer off-screen.
                     Divider()
+                    if let notice = viewModel.modelNotice {
+                        ModelNoticeBanner(text: notice) { viewModel.modelNotice = nil }
+                        Divider()
+                    }
                     ComposerView(viewModel: viewModel)
                 }
                 .inspector(isPresented: $showInspector) {
@@ -190,5 +199,36 @@ struct ChatDetailView: View {
         case .regenerate: return "Regenerate"
         case .delete:     return "Delete"
         }
+    }
+}
+
+/// Informational (non-error) strip above the composer — e.g. "this model
+/// can't use tools". Dismissable; also cleared automatically on the next send.
+private struct ModelNoticeBanner: View {
+    let text: String
+    let onDismiss: () -> Void
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 8) {
+            Image(systemName: "info.circle")
+                .foregroundStyle(.secondary)
+            Text(text)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Button {
+                onDismiss()
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundStyle(.tertiary)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Dismiss notice")
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .frame(maxWidth: .infinity)
+        .background(.quaternary.opacity(0.5))
     }
 }

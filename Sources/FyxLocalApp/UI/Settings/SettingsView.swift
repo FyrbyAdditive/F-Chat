@@ -433,12 +433,15 @@ private struct AddProviderSheet: View {
             Text("Add provider").font(.title3.bold())
             TextField("Display name", text: $name)
                 .textFieldStyle(.roundedBorder)
+            // Radio group (not segmented): it lays the kinds out vertically,
+            // so the sheet never needs to grow horizontally as API types are
+            // added — the segmented control truncated at four.
             Picker("API type", selection: $apiKind) {
                 ForEach(LLMAPIKind.allCases, id: \.self) { kind in
                     Text(kind.displayName).tag(kind)
                 }
             }
-            .pickerStyle(.segmented)
+            .pickerStyle(.radioGroup)
             .onChange(of: apiKind) { old, new in
                 // Prefill the URL with the new kind's default endpoint, but
                 // only when the user hasn't typed their own URL yet (the field
@@ -466,9 +469,7 @@ private struct AddProviderSheet: View {
             )
         }
         .padding(20)
-        // Wide enough for the segmented API-type picker to show all three
-        // options (incl. "OpenAI (Chat Completions)") without truncation.
-        .frame(width: 520)
+        .frame(width: 440)
     }
 }
 
